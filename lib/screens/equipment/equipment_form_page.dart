@@ -38,7 +38,7 @@ class _EquipmentFormPageState extends State<EquipmentFormPage> {
                   child: Column(
                     children: [
                       DropdownButtonFormField<String>(
-                        value: _client,
+                        initialValue: _client,
                         decoration: const InputDecoration(
                           labelText: 'Cliente proprietário *',
                           prefixIcon: Icon(Icons.business_outlined),

@@ -1,7 +1,7 @@
-/// Dados fictícios usados exclusivamente para preencher a interface.
-///
-/// DADO MOCKADO: não substitui os modelos reais do domínio. Quando a camada de
-/// funcionalidades for implementada, este arquivo pode ser removido.
+// Dados fictícios usados exclusivamente para preencher a interface.
+//
+// DADO MOCKADO: não substitui os modelos reais do domínio. Quando a camada de
+// funcionalidades for implementada, este arquivo pode ser removido.
 
 class MockOrderData {
   const MockOrderData({

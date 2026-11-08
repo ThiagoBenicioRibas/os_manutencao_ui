@@ -64,7 +64,7 @@ class _TechnicianFormPageState extends State<TechnicianFormPage> {
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
-                        value: _status,
+                        initialValue: _status,
                         decoration: const InputDecoration(
                           labelText: 'Situação do profissional *',
                           prefixIcon: Icon(Icons.toggle_on_outlined),
@@ -75,7 +75,9 @@ class _TechnicianFormPageState extends State<TechnicianFormPage> {
                             .toList(),
                         onChanged: (value) {
                           // UI APENAS: altera somente o estado visual do campo.
-                          if (value != null) setState(() => _status = value);
+                          if (value != null) {
+                            setState(() => _status = value);
+                          }
                           // TODO(FUNCIONALIDADE): persistir a situação e impedir
                           // atribuição de técnicos inativos, se essa regra for usada.
                         },

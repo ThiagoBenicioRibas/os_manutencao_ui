@@ -33,12 +33,14 @@ class _OrdersPageState extends State<OrdersPage> {
             children: [
               AppPageHeader(
                 title: 'Ordens de serviço',
-                subtitle: 'Busque, filtre e acompanhe o ciclo de cada atendimento.',
+                subtitle:
+                    'Busque, filtre e acompanhe o ciclo de cada atendimento.',
                 actions: [
                   FilledButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const OrderFormPage()),
+                        MaterialPageRoute(
+                            builder: (_) => const OrderFormPage()),
                       );
                     },
                     icon: const Icon(Icons.add),
@@ -49,7 +51,8 @@ class _OrdersPageState extends State<OrdersPage> {
               const SizedBox(height: 24),
               SectionCard(
                 title: 'Busca e filtros',
-                subtitle: 'Os controles abaixo são somente visuais nesta entrega.',
+                subtitle:
+                    'Os controles abaixo são somente visuais nesta entrega.',
                 child: Column(
                   children: [
                     TextField(
@@ -69,8 +72,9 @@ class _OrdersPageState extends State<OrdersPage> {
                         final wide = constraints.maxWidth >= 840;
                         final filters = <Widget>[
                           DropdownButtonFormField<String>(
-                            value: _status,
-                            decoration: const InputDecoration(labelText: 'Status'),
+                            initialValue: _status,
+                            decoration:
+                                const InputDecoration(labelText: 'Status'),
                             items: const [
                               'Todos',
                               'Aberta',
@@ -80,41 +84,64 @@ class _OrdersPageState extends State<OrdersPage> {
                               'Concluída',
                               'Cancelada',
                             ]
-                                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                                .map((item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ))
                                 .toList(),
                             onChanged: (value) {
                               // UI APENAS: preserva a seleção do controle.
                               // TODO(FUNCIONALIDADE): aplicar o filtro nos dados reais.
-                              if (value != null) setState(() => _status = value);
+                              if (value != null) {
+                                setState(() => _status = value);
+                              }
                             },
                           ),
                           DropdownButtonFormField<String>(
-                            value: _priority,
-                            decoration: const InputDecoration(labelText: 'Prioridade'),
-                            items: const ['Todas', 'Baixa', 'Média', 'Alta', 'Urgente']
-                                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                            initialValue: _priority,
+                            decoration:
+                                const InputDecoration(labelText: 'Prioridade'),
+                            items: const [
+                              'Todas',
+                              'Baixa',
+                              'Média',
+                              'Alta',
+                              'Urgente'
+                            ]
+                                .map((item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ))
                                 .toList(),
                             onChanged: (value) {
                               // UI APENAS: preserva a seleção do controle.
                               // TODO(FUNCIONALIDADE): aplicar o filtro nos dados reais.
-                              if (value != null) setState(() => _priority = value);
+                              if (value != null) {
+                                setState(() => _priority = value);
+                              }
                             },
                           ),
                           DropdownButtonFormField<String>(
-                            value: _technician,
-                            decoration: const InputDecoration(labelText: 'Técnico'),
+                            initialValue: _technician,
+                            decoration:
+                                const InputDecoration(labelText: 'Técnico'),
                             items: const [
                               'Todos',
                               'Carlos Almeida',
                               'Fernanda Souza',
                               'Rafael Martins',
                             ]
-                                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                                .map((item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ))
                                 .toList(),
                             onChanged: (value) {
                               // UI APENAS: preserva a seleção do controle.
                               // TODO(FUNCIONALIDADE): aplicar o filtro nos dados reais.
-                              if (value != null) setState(() => _technician = value);
+                              if (value != null) {
+                                setState(() => _technician = value);
+                              }
                             },
                           ),
                         ];

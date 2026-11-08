@@ -76,7 +76,7 @@ class _OrderFormPageState extends State<OrderFormPage> {
                         ),
                       ),
                       DropdownButtonFormField<String>(
-                        value: _client,
+                        initialValue: _client,
                         decoration: const InputDecoration(
                           labelText: 'Cliente *',
                           prefixIcon: Icon(Icons.business_outlined),
@@ -98,7 +98,7 @@ class _OrderFormPageState extends State<OrderFormPage> {
                         },
                       ),
                       DropdownButtonFormField<String>(
-                        value: _equipment,
+                        initialValue: _equipment,
                         decoration: const InputDecoration(
                           labelText: 'Equipamento *',
                           prefixIcon:
@@ -121,7 +121,7 @@ class _OrderFormPageState extends State<OrderFormPage> {
                         },
                       ),
                       DropdownButtonFormField<String>(
-                        value: _technician,
+                        initialValue: _technician,
                         decoration: const InputDecoration(
                           labelText: 'Técnico responsável',
                           prefixIcon: Icon(Icons.engineering_outlined),
@@ -136,8 +136,9 @@ class _OrderFormPageState extends State<OrderFormPage> {
                             .toList(),
                         onChanged: (value) {
                           // UI APENAS: estado temporário da interface.
-                          if (value != null)
+                          if (value != null) {
                             setState(() => _technician = value);
+                          }
                           // TODO(FUNCIONALIDADE): carregar somente técnicos ativos
                           // e persistir a atribuição da OS.
                         },
@@ -166,7 +167,7 @@ class _OrderFormPageState extends State<OrderFormPage> {
                       _ResponsiveFields(
                         children: [
                           DropdownButtonFormField<String>(
-                            value: _priority,
+                            initialValue: _priority,
                             decoration: const InputDecoration(
                               labelText: 'Prioridade *',
                               prefixIcon: Icon(Icons.flag_outlined),
@@ -177,14 +178,15 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                 .toList(),
                             onChanged: (value) {
                               // UI APENAS: atualiza o controle visual.
-                              if (value != null)
+                              if (value != null) {
                                 setState(() => _priority = value);
+                              }
                               // TODO(FUNCIONALIDADE): persistir e aplicar as regras
                               // de destaque de prioridade.
                             },
                           ),
                           DropdownButtonFormField<String>(
-                            value: _status,
+                            initialValue: _status,
                             decoration: const InputDecoration(
                               labelText: 'Status *',
                               prefixIcon: Icon(Icons.sync_alt),
@@ -202,8 +204,9 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                 .toList(),
                             onChanged: (value) {
                               // UI APENAS: troca o texto selecionado.
-                              if (value != null)
+                              if (value != null) {
                                 setState(() => _status = value);
+                              }
                               // TODO(FUNCIONALIDADE): validar transições permitidas.
                               // Exemplo: impedir conclusão sem diagnóstico/solução.
                             },
