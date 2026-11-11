@@ -1,24 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:os_manutencao_ui/core/mock_data.dart';
+import 'package:os_manutencao_ui/models/ordem_servico.dart';
 import 'package:os_manutencao_ui/widgets/status_chip.dart';
 
-/// Card visual de uma ordem de serviço na listagem.
+/// Card de uma ordem real, mantendo a apresentação original do professor.
 class OrderCard extends StatelessWidget {
   const OrderCard({
     super.key,
     required this.order,
+    required this.cliente,
+    required this.equipamento,
+    required this.tecnico,
     required this.onView,
     required this.onEdit,
   });
 
-  final MockOrderData order;
+  final OrdemServico order;
+  final String cliente;
+  final String equipamento;
+  final String tecnico;
   final VoidCallback onView;
   final VoidCallback onEdit;
 
+  String _data(DateTime? data) => data == null
+      ? 'Não definido'
+      : '${data.day.toString().padLeft(2, '0')}/'
+          '${data.month.toString().padLeft(2, '0')}/${data.year}';
+
+  String _reais(int centavos) =>
+      'R\$ ${centavos ~/ 100},${(centavos % 100).toString().padLeft(2, '0')}';
+
+  bool get _atrasada {
+    final prazo = order.prazoPrevisto;
+    if (prazo == null ||
+        order.status == 'Concluída' ||
+        order.status == 'Cancelada') {
+      return false;
+    }
+    final hoje = DateTime.now();
+    return DateTime(prazo.year, prazo.month, prazo.day)
+        .isBefore(DateTime(hoje.year, hoje.month, hoje.day));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currency = 'R\$ ${order.totalValue.toStringAsFixed(2).replaceAll('.', ',')}';
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -33,38 +57,34 @@ class OrderCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order.code,
+                        order.codigo,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        order.client,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+                      Text(cliente, style: Theme.of(context).textTheme.titleMedium),
                     ],
                   ),
                 ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    StatusChip(
-                      label: order.status,
-                      kind: statusKindFor(order.status),
-                    ),
-                    StatusChip(
-                      label: order.priority,
-                      kind: statusKindFor(order.priority),
-                    ),
-                    if (order.isLate)
-                      const StatusChip(
-                        label: 'Atrasada',
-                        kind: StatusChipKind.danger,
+                Flexible(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      StatusChip(label: order.status, kind: statusKindFor(order.status)),
+                      StatusChip(
+                        label: order.prioridade,
+                        kind: statusKindFor(order.prioridade),
                       ),
-                  ],
+                      if (_atrasada)
+                        const StatusChip(
+                          label: 'Atrasada',
+                          kind: StatusChipKind.danger,
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -73,12 +93,13 @@ class OrderCard extends StatelessWidget {
               spacing: 24,
               runSpacing: 12,
               children: [
-                _Info(icon: Icons.memory_outlined, text: order.equipment),
-                _Info(icon: Icons.engineering_outlined, text: order.technician),
-                _Info(icon: Icons.event_outlined, text: 'Prazo: ${order.deadline}'),
-                _Info(icon: Icons.payments_outlined, text: currency),
-                if (order.hasEvidence)
-                  const _Info(icon: Icons.photo_library_outlined, text: 'Com evidências'),
+                _Info(icon: Icons.memory_outlined, text: equipamento),
+                _Info(icon: Icons.engineering_outlined, text: tecnico),
+                _Info(icon: Icons.event_outlined, text: 'Prazo: ${_data(order.prazoPrevisto)}'),
+                _Info(
+                  icon: Icons.payments_outlined,
+                  text: 'Mão de obra: ${_reais(order.valorMaoObraCentavos)}',
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -116,11 +137,7 @@ class _Info extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+        Icon(icon, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 6),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 320),

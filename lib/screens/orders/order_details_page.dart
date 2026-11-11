@@ -1,34 +1,113 @@
 import 'package:flutter/material.dart';
-import 'package:os_manutencao_ui/core/mock_data.dart';
+import 'package:provider/provider.dart';
+
+import 'package:os_manutencao_ui/controllers/cliente_controller.dart';
+import 'package:os_manutencao_ui/controllers/equipamento_controller.dart';
+import 'package:os_manutencao_ui/controllers/ordem_servico_controller.dart';
+import 'package:os_manutencao_ui/controllers/tecnico_controller.dart';
+import 'package:os_manutencao_ui/models/ordem_servico.dart';
 import 'package:os_manutencao_ui/screens/orders/order_form_page.dart';
 import 'package:os_manutencao_ui/widgets/labeled_value.dart';
 import 'package:os_manutencao_ui/widgets/section_card.dart';
 import 'package:os_manutencao_ui/widgets/status_chip.dart';
 
-/// Tela de consulta completa de uma ordem de serviço.
-///
-/// Todas as informações são mockadas. As abas existem para representar a
-/// organização visual esperada para diagnóstico, financeiro, evidências e
-/// histórico sem implementar persistência ou regras.
-class OrderDetailsPage extends StatelessWidget {
+/// Detalhes da OS real, conservando as cinco abas originais do professor.
+class OrderDetailsPage extends StatefulWidget {
   const OrderDetailsPage({super.key, required this.order});
 
-  final MockOrderData order;
+  final OrdemServico order;
+
+  @override
+  State<OrderDetailsPage> createState() => _OrderDetailsPageState();
+}
+
+class _OrderDetailsPageState extends State<OrderDetailsPage> {
+  late OrdemServico _ordem;
+  bool _excluindo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordem = widget.order;
+  }
+
+  Future<void> _editar() async {
+    final alterou = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => OrderFormPage(order: _ordem)),
+    );
+    if (!mounted || alterou != true) return;
+    final ordens = context.read<OrdemServicoController>().ordens;
+    final novas = ordens.where((o) => o.id == _ordem.id);
+    if (novas.isNotEmpty) setState(() => _ordem = novas.first);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Ordem de serviço atualizada com sucesso.')),
+    );
+  }
+
+  Future<void> _excluir() async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir ordem de serviço?'),
+        content: Text('Confirma a exclusão de ${_ordem.codigo}? Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Confirmar exclusão'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true || !mounted || _ordem.id == null) return;
+    setState(() => _excluindo = true);
+    try {
+      await context.read<OrdemServicoController>().excluir(_ordem.id!);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível excluir a ordem de serviço.')),
+      );
+    } finally {
+      if (mounted) setState(() => _excluindo = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final nomesClientes = {
+      for (final c in context.watch<ClienteController>().clientes)
+        if (c.id != null) c.id!: c.nome,
+    };
+    final nomesEquipamentos = {
+      for (final e in context.watch<EquipamentoController>().equipamentos)
+        if (e.id != null)
+          e.id!: [e.tipo, e.marca, e.modelo]
+              .whereType<String>()
+              .where((s) => s.trim().isNotEmpty)
+              .join(' — '),
+    };
+    final nomesTecnicos = {
+      for (final t in context.watch<TecnicoController>().tecnicos)
+        if (t.id != null) t.id!: t.nome,
+    };
+    final cliente = nomesClientes[_ordem.clienteId] ?? 'Cliente não encontrado';
+    final equipamento =
+        nomesEquipamentos[_ordem.equipamentoId] ?? 'Equipamento não encontrado';
+    final tecnico = nomesTecnicos[_ordem.tecnicoId] ?? 'Sem técnico atribuído';
+
     return DefaultTabController(
       length: 5,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(order.code),
+          title: Text(_ordem.codigo),
           actions: [
             TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => OrderFormPage(order: order)),
-                );
-              },
+              onPressed: _excluindo ? null : _editar,
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Editar'),
             ),
@@ -47,16 +126,44 @@ class OrderDetailsPage extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            _SummaryTab(order: order),
-            _ServiceTab(order: order),
-            _FinancialTab(order: order),
-            _EvidenceTab(order: order),
-            _HistoryTab(order: order),
+            _Resumo(
+              ordem: _ordem,
+              cliente: cliente,
+              equipamento: equipamento,
+              tecnico: tecnico,
+              excluindo: _excluindo,
+              excluir: _excluir,
+            ),
+            _Servico(ordem: _ordem),
+            _Financeiro(ordem: _ordem),
+            const _Evidencias(),
+            const _Historico(),
           ],
         ),
       ),
     );
   }
+}
+
+String _data(DateTime? data) => data == null
+    ? 'Não definido'
+    : '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}/${data.year}';
+
+String _reais(int centavos) =>
+    'R\$ ${centavos ~/ 100},${(centavos % 100).toString().padLeft(2, '0')}';
+
+String _texto(String? valor) =>
+    valor == null || valor.trim().isEmpty ? 'Não informado' : valor;
+
+bool _atrasada(OrdemServico ordem) {
+  final prazo = ordem.prazoPrevisto;
+  if (prazo == null || ordem.status == 'Concluída' || ordem.status == 'Cancelada') {
+    return false;
+  }
+  final hoje = DateTime.now();
+  return DateTime(prazo.year, prazo.month, prazo.day)
+      .isBefore(DateTime(hoje.year, hoje.month, hoje.day));
 }
 
 class _TabBody extends StatelessWidget {
@@ -78,10 +185,22 @@ class _TabBody extends StatelessWidget {
   }
 }
 
-class _SummaryTab extends StatelessWidget {
-  const _SummaryTab({required this.order});
+class _Resumo extends StatelessWidget {
+  const _Resumo({
+    required this.ordem,
+    required this.cliente,
+    required this.equipamento,
+    required this.tecnico,
+    required this.excluindo,
+    required this.excluir,
+  });
 
-  final MockOrderData order;
+  final OrdemServico ordem;
+  final String cliente;
+  final String equipamento;
+  final String tecnico;
+  final bool excluindo;
+  final VoidCallback excluir;
 
   @override
   Widget build(BuildContext context) {
@@ -99,76 +218,70 @@ class _SummaryTab extends StatelessWidget {
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      StatusChip(label: order.status, kind: statusKindFor(order.status)),
-                      StatusChip(label: order.priority, kind: statusKindFor(order.priority)),
-                      if (order.isLate)
-                        const StatusChip(
-                          label: 'Atrasada',
-                          kind: StatusChipKind.danger,
-                        ),
+                      StatusChip(label: ordem.status, kind: statusKindFor(ordem.status)),
+                      StatusChip(
+                        label: ordem.prioridade,
+                        kind: statusKindFor(ordem.prioridade),
+                      ),
+                      if (_atrasada(ordem))
+                        const StatusChip(label: 'Atrasada', kind: StatusChipKind.danger),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth;
-                      final itemWidth = width >= 800 ? (width - 24) / 3 : width;
-                      return Wrap(
-                        spacing: 12,
-                        runSpacing: 20,
-                        children: [
-                          SizedBox(
-                            width: itemWidth,
-                            child: LabeledValue(
-                              label: 'Cliente',
-                              value: order.client,
-                              icon: Icons.business_outlined,
-                            ),
+                  LayoutBuilder(builder: (context, constraints) {
+                    final largura = constraints.maxWidth >= 800
+                        ? (constraints.maxWidth - 24) / 3
+                        : constraints.maxWidth;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 20,
+                      children: [
+                        SizedBox(
+                          width: largura,
+                          child: LabeledValue(
+                            label: 'Cliente', value: cliente,
+                            icon: Icons.business_outlined,
                           ),
-                          SizedBox(
-                            width: itemWidth,
-                            child: LabeledValue(
-                              label: 'Equipamento',
-                              value: order.equipment,
-                              icon: Icons.precision_manufacturing_outlined,
-                            ),
+                        ),
+                        SizedBox(
+                          width: largura,
+                          child: LabeledValue(
+                            label: 'Equipamento', value: equipamento,
+                            icon: Icons.precision_manufacturing_outlined,
                           ),
-                          SizedBox(
-                            width: itemWidth,
-                            child: LabeledValue(
-                              label: 'Técnico responsável',
-                              value: order.technician,
-                              icon: Icons.engineering_outlined,
-                            ),
+                        ),
+                        SizedBox(
+                          width: largura,
+                          child: LabeledValue(
+                            label: 'Técnico responsável', value: tecnico,
+                            icon: Icons.engineering_outlined,
                           ),
-                          SizedBox(
-                            width: itemWidth,
-                            child: const LabeledValue(
-                              label: 'Data de abertura',
-                              value: '19/08/2026',
-                              icon: Icons.event_outlined,
-                            ),
+                        ),
+                        SizedBox(
+                          width: largura,
+                          child: LabeledValue(
+                            label: 'Data de abertura', value: _data(ordem.dataAbertura),
+                            icon: Icons.event_outlined,
                           ),
-                          SizedBox(
-                            width: itemWidth,
-                            child: LabeledValue(
-                              label: 'Prazo previsto',
-                              value: order.deadline,
-                              icon: Icons.event_busy_outlined,
-                            ),
+                        ),
+                        SizedBox(
+                          width: largura,
+                          child: LabeledValue(
+                            label: 'Prazo previsto', value: _data(ordem.prazoPrevisto),
+                            icon: Icons.event_busy_outlined,
                           ),
-                          SizedBox(
-                            width: itemWidth,
-                            child: LabeledValue(
-                              label: 'Valor total',
-                              value: 'R\$ ${order.totalValue.toStringAsFixed(2).replaceAll('.', ',')}',
-                              icon: Icons.payments_outlined,
-                            ),
+                        ),
+                        SizedBox(
+                          width: largura,
+                          child: LabeledValue(
+                            label: 'Mão de obra (parcial)',
+                            value: _reais(ordem.valorMaoObraCentavos),
+                            icon: Icons.payments_outlined,
                           ),
-                        ],
-                      );
-                    },
-                  ),
+                        ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),
@@ -176,33 +289,28 @@ class _SummaryTab extends StatelessWidget {
           const SizedBox(height: 16),
           SectionCard(
             title: 'Descrição do problema',
-            child: Text(order.problem),
+            child: Text(ordem.descricaoProblema),
           ),
           const SizedBox(height: 16),
           SectionCard(
             title: 'Ações disponíveis',
-            subtitle: 'Os botões representam ações previstas, sem executar regras de negócio.',
+            subtitle: 'Alteração de status e comprovante serão integrados em etapas posteriores.',
             child: Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
                 FilledButton.tonalIcon(
-                  onPressed: () {
-                    // TODO(FUNCIONALIDADE): validar e efetuar mudança de status.
-                  },
-                  icon: const Icon(Icons.sync_alt),
-                  label: const Text('Alterar status'),
+                  onPressed: null,
+                  icon: Icon(Icons.sync_alt),
+                  label: Text('Alterar status'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    // TODO(FUNCIONALIDADE): gerar comprovante ou relatório PDF,
-                    // caso o aluno implemente esse diferencial opcional.
-                  },
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: const Text('Gerar comprovante'),
+                  onPressed: null,
+                  icon: Icon(Icons.picture_as_pdf_outlined),
+                  label: Text('Gerar comprovante'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => _showDeleteDialog(context),
+                  onPressed: excluindo ? null : excluir,
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('Excluir ordem'),
                 ),
@@ -213,59 +321,24 @@ class _SummaryTab extends StatelessWidget {
       ),
     );
   }
-
-  void _showDeleteDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir ordem de serviço?'),
-        content: Text(
-          'Confirma a exclusão de ${order.code}? Nesta versão visual, nenhuma informação será removida.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              // TODO(FUNCIONALIDADE): verificar relacionamentos, permissões e
-              // excluir a OS pelo repository. Depois, atualizar a listagem.
-              Navigator.of(context).pop();
-            },
-            child: const Text('Confirmar exclusão'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class _ServiceTab extends StatelessWidget {
-  const _ServiceTab({required this.order});
-
-  final MockOrderData order;
+class _Servico extends StatelessWidget {
+  const _Servico({required this.ordem});
+  final OrdemServico ordem;
 
   @override
   Widget build(BuildContext context) {
     return _TabBody(
       child: Column(
         children: [
-          SectionCard(
-            title: 'Diagnóstico técnico',
-            child: Text(order.diagnosis),
-          ),
+          SectionCard(title: 'Diagnóstico técnico', child: Text(_texto(ordem.diagnostico))),
+          const SizedBox(height: 16),
+          SectionCard(title: 'Solução aplicada', child: Text(_texto(ordem.solucao))),
           const SizedBox(height: 16),
           SectionCard(
-            title: 'Solução aplicada',
-            child: Text(order.solution),
-          ),
-          const SizedBox(height: 16),
-          const SectionCard(
             title: 'Observações do atendimento',
-            child: Text(
-              'DADO MOCKADO: cliente orientado sobre manutenção preventiva e periodicidade de inspeção.',
-            ),
+            child: Text(_texto(ordem.observacoesAtendimento)),
           ),
         ],
       ),
@@ -273,10 +346,9 @@ class _ServiceTab extends StatelessWidget {
   }
 }
 
-class _FinancialTab extends StatelessWidget {
-  const _FinancialTab({required this.order});
-
-  final MockOrderData order;
+class _Financeiro extends StatelessWidget {
+  const _Financeiro({required this.ordem});
+  final OrdemServico ordem;
 
   @override
   Widget build(BuildContext context) {
@@ -285,30 +357,16 @@ class _FinancialTab extends StatelessWidget {
         children: [
           SectionCard(
             title: 'Itens utilizados',
-            subtitle: 'Valores demonstrativos sem cálculo ou persistência real.',
+            subtitle: 'O cadastro de peças e materiais será implementado na Etapa 7.',
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _FinancialRow(
-                  description: 'Peça / material de exemplo',
-                  quantity: '1',
-                  unitValue: 'R\$ 240,00',
-                ),
-                const Divider(height: 28),
-                const _FinancialRow(
-                  description: 'Material de consumo',
-                  quantity: '2',
-                  unitValue: 'R\$ 45,00',
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      // TODO(FUNCIONALIDADE): adicionar/remover itens vinculados à OS.
-                    },
-                    icon: const Icon(Icons.add_box_outlined),
-                    label: const Text('Gerenciar itens'),
-                  ),
+                Text('Nenhum item apresentado nesta etapa.'),
+                SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: null,
+                  icon: Icon(Icons.add_box_outlined),
+                  label: Text('Gerenciar itens'),
                 ),
               ],
             ),
@@ -318,25 +376,17 @@ class _FinancialTab extends StatelessWidget {
             title: 'Resumo financeiro',
             child: Column(
               children: [
-                _MoneyLine(
-                  label: 'Mão de obra',
-                  value: 'R\$ ${order.laborValue.toStringAsFixed(2).replaceAll('.', ',')}',
-                ),
+                _MoneyLine(label: 'Mão de obra', value: _reais(ordem.valorMaoObraCentavos)),
                 const SizedBox(height: 10),
-                _MoneyLine(
-                  label: 'Peças / materiais',
-                  value: 'R\$ ${order.partsValue.toStringAsFixed(2).replaceAll('.', ',')}',
-                ),
+                const _MoneyLine(label: 'Peças / materiais', value: 'A integrar'),
                 const Divider(height: 30),
                 _MoneyLine(
-                  label: 'Total da OS',
-                  value: 'R\$ ${order.totalValue.toStringAsFixed(2).replaceAll('.', ',')}',
+                  label: 'Subtotal da mão de obra',
+                  value: _reais(ordem.valorMaoObraCentavos),
                   emphasized: true,
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'TODO(FUNCIONALIDADE): substituir estes valores mockados pelo cálculo real da OS.',
-                ),
+                const Text('O total completo da OS será calculado na Etapa 7.'),
               ],
             ),
           ),
@@ -346,93 +396,42 @@ class _FinancialTab extends StatelessWidget {
   }
 }
 
-class _FinancialRow extends StatelessWidget {
-  const _FinancialRow({
-    required this.description,
-    required this.quantity,
-    required this.unitValue,
-  });
-
-  final String description;
-  final String quantity;
-  final String unitValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(description)),
-        const SizedBox(width: 12),
-        Text('Qtd. $quantity'),
-        const SizedBox(width: 20),
-        Text(unitValue, style: const TextStyle(fontWeight: FontWeight.w700)),
-      ],
-    );
-  }
-}
-
 class _MoneyLine extends StatelessWidget {
-  const _MoneyLine({
-    required this.label,
-    required this.value,
-    this.emphasized = false,
-  });
-
+  const _MoneyLine({required this.label, required this.value, this.emphasized = false});
   final String label;
   final String value;
   final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
-    final style = emphasized
+    final estilo = emphasized
         ? Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)
         : Theme.of(context).textTheme.bodyLarge;
-
-    return Row(
-      children: [
-        Expanded(child: Text(label, style: style)),
-        Text(value, style: style),
-      ],
-    );
+    return Row(children: [
+      Expanded(child: Text(label, style: estilo)),
+      Text(value, style: estilo),
+    ]);
   }
 }
 
-class _EvidenceTab extends StatelessWidget {
-  const _EvidenceTab({required this.order});
-
-  final MockOrderData order;
+class _Evidencias extends StatelessWidget {
+  const _Evidencias();
 
   @override
   Widget build(BuildContext context) {
     return _TabBody(
       child: SectionCard(
         title: 'Imagens do atendimento',
-        subtitle: order.hasEvidence
-            ? 'Há espaços demonstrativos para evidências vinculadas à OS.'
-            : 'Nenhuma evidência demonstrativa foi associada a esta OS.',
+        subtitle: 'As evidências serão vinculadas ao SQLite na Etapa 7.',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (order.hasEvidence)
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: const [
-                  _EvidenceCard(label: 'Antes da manutenção'),
-                  _EvidenceCard(label: 'Defeito encontrado'),
-                  _EvidenceCard(label: 'Após manutenção'),
-                ],
-              )
-            else
-              const Text('Nenhuma imagem cadastrada.'),
-            const SizedBox(height: 18),
+            Text('Nenhuma imagem apresentada nesta etapa.'),
+            SizedBox(height: 18),
             OutlinedButton.icon(
-              onPressed: () {
-                // TODO(FUNCIONALIDADE): selecionar/capturar imagem e associá-la
-                // à ordem de serviço, incluindo descrição ou tipo da evidência.
-              },
-              icon: const Icon(Icons.add_a_photo_outlined),
-              label: const Text('Adicionar evidência'),
+              onPressed: null,
+              icon: Icon(Icons.add_a_photo_outlined),
+              label: Text('Adicionar evidência'),
             ),
           ],
         ),
@@ -441,116 +440,16 @@ class _EvidenceTab extends StatelessWidget {
   }
 }
 
-class _EvidenceCard extends StatelessWidget {
-  const _EvidenceCard({required this.label});
-
-  final String label;
+class _Historico extends StatelessWidget {
+  const _Historico();
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Imagem demonstrativa: $label',
-      child: Container(
-        width: 240,
-        height: 160,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.image_outlined, size: 42),
-            const SizedBox(height: 10),
-            Text(label),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryTab extends StatelessWidget {
-  const _HistoryTab({required this.order});
-
-  final MockOrderData order;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TabBody(
+    return const _TabBody(
       child: SectionCard(
         title: 'Histórico da ordem',
-        subtitle: 'Linha do tempo estática para demonstrar a evolução do atendimento.',
-        child: Column(
-          children: const [
-            _HistoryItem(
-              date: '19/08/2026 • 08:45',
-              title: 'Ordem aberta',
-              description: 'Solicitação registrada pelo atendimento.',
-            ),
-            _HistoryItem(
-              date: '19/08/2026 • 09:10',
-              title: 'Técnico atribuído',
-              description: 'Responsável definido para o atendimento.',
-            ),
-            _HistoryItem(
-              date: '19/08/2026 • 10:30',
-              title: 'Status atualizado',
-              description: 'Atendimento iniciado.',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryItem extends StatelessWidget {
-  const _HistoryItem({
-    required this.date,
-    required this.title,
-    required this.description,
-  });
-
-  final String date;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            margin: const EdgeInsets.only(top: 5),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(date, style: Theme.of(context).textTheme.labelMedium),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(description),
-              ],
-            ),
-          ),
-        ],
+        subtitle: 'O histórico real das mudanças de status será implementado na Etapa 6.',
+        child: Text('Nenhuma movimentação apresentada nesta etapa.'),
       ),
     );
   }
