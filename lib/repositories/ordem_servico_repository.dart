@@ -1,6 +1,8 @@
 
+import 'package:os_manutencao_ui/models/historico_status.dart';
 import 'package:os_manutencao_ui/models/ordem_servico.dart';
 import 'package:os_manutencao_ui/services/database_service.dart';
+import 'package:os_manutencao_ui/services/regras_ordem_servico.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Responsável pelas operações de ordens de serviço no SQLite.
@@ -101,7 +103,11 @@ class OrdemServicoRepository {
     return registros.map(OrdemServico.fromMap).toList();
   }
 
-  /// Atualiza uma ordem de serviço existente.
+  /// Atualiza os dados de uma ordem existente.
+  ///
+  /// Impede mudanças de status por este método.
+  /// Para alterar o status e registrar o histórico,
+  /// utilize alterarStatus.
   ///
   /// Retorna a quantidade de registros atualizados.
   Future<int> atualizar(OrdemServico ordem) async {
@@ -127,10 +133,89 @@ class OrdemServicoRepository {
     );
   }
 
+  /// Altera o status de uma ordem e registra seu histórico.
+  ///
+  /// As duas gravações acontecem na mesma transação SQLite.
+  /// Caso uma delas falhe, nenhuma alteração é confirmada.
+  Future<void> alterarStatus({
+    required int ordemId,
+    required String novoStatus,
+    String? observacao,
+  }) async {
+    final banco = await _databaseService.database;
+
+    await banco.transaction((transacao) async {
+      // Consulta o estado atual dentro da transação.
+      final registros = await transacao.query(
+        'ordens_servico',
+        where: 'id = ?',
+        whereArgs: [ordemId],
+        limit: 1,
+      );
+
+      if (registros.isEmpty) {
+        throw StateError(
+          'A ordem de serviço $ordemId não foi encontrada.',
+        );
+      }
+
+      final ordemAtual = OrdemServico.fromMap(registros.first);
+
+      // Valida a mudança antes de gravar qualquer informação.
+      RegrasOrdemServico.validarTransicao(
+        ordemAtual,
+        novoStatus,
+      );
+
+      final dataAlteracao = DateTime.now();
+
+      final dadosAtualizados = <String, Object?>{
+        'status': novoStatus,
+      };
+
+      if (novoStatus == 'Concluída') {
+        dadosAtualizados['data_conclusao'] =
+            dataAlteracao.toIso8601String();
+      }
+
+      // Primeira operação: atualiza o status da OS.
+      final quantidadeAtualizada = await transacao.update(
+        'ordens_servico',
+        dadosAtualizados,
+        where: 'id = ?',
+        whereArgs: [ordemId],
+      );
+
+      if (quantidadeAtualizada != 1) {
+        throw StateError(
+          'Não foi possível atualizar o status da ordem $ordemId.',
+        );
+      }
+
+      // Segunda operação: registra a mudança no histórico.
+      final historico = HistoricoStatus(
+        ordemId: ordemId,
+        statusAnterior: ordemAtual.status,
+        statusNovo: novoStatus,
+        dataAlteracao: dataAlteracao,
+        observacao: observacao,
+      );
+
+      final dadosHistorico = historico.toMap()..remove('id');
+
+      await transacao.insert(
+        'historico_status',
+        dadosHistorico,
+      );
+
+      // O SQLite confirma as duas alterações conjuntamente.
+    });
+  }
+
   /// Exclui uma ordem de serviço pelo identificador.
   ///
-  /// O SQLite removerá os registros dependentes configurados
-  /// com ON DELETE CASCADE, como itens e histórico.
+  /// Registros dependentes com ON DELETE CASCADE
+  /// serão removidos automaticamente pelo SQLite.
   ///
   /// Arquivos físicos de evidências exigem tratamento separado.
   Future<int> excluir(int id) async {

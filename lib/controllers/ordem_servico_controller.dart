@@ -103,10 +103,40 @@ class OrdemServicoController extends ChangeNotifier {
   /// Atualiza uma ordem de serviço existente.
   ///
   /// Retorna a quantidade de registros atualizados.
+  ///
+  /// Para alterar o status e registrar seu histórico,
+  /// utilize o método alterarStatus.
   Future<int> atualizar(OrdemServico ordem) {
     return _executarAlteracao(
       () => _repositorio.atualizar(ordem),
     );
+  }
+
+  /// Altera o status de uma ordem de serviço.
+  ///
+  /// A alteração do status e o registro do histórico
+  /// são realizados pelo repositório em uma única
+  /// transação SQLite.
+  ///
+  /// Após a operação, a lista de ordens é atualizada
+  /// e os filtros existentes são preservados.
+  Future<void> alterarStatus({
+    required int ordemId,
+    required String novoStatus,
+    String? observacao,
+  }) async {
+    await _executarAlteracao(() async {
+      await _repositorio.alterarStatus(
+        ordemId: ordemId,
+        novoStatus: novoStatus,
+        observacao: observacao,
+      );
+
+      // O método auxiliar utiliza int porque os métodos
+      // anteriores retornam identificadores ou contagens.
+      // O resultado não é utilizado nesta operação.
+      return 1;
+    });
   }
 
   /// Exclui uma ordem de serviço pelo identificador.
