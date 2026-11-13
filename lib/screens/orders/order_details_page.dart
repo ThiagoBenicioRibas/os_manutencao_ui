@@ -5,10 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:os_manutencao_ui/controllers/cliente_controller.dart';
 import 'package:os_manutencao_ui/controllers/equipamento_controller.dart';
 import 'package:os_manutencao_ui/controllers/historico_status_controller.dart';
+import 'package:os_manutencao_ui/controllers/item_utilizado_controller.dart';
 import 'package:os_manutencao_ui/controllers/ordem_servico_controller.dart';
 import 'package:os_manutencao_ui/controllers/tecnico_controller.dart';
 import 'package:os_manutencao_ui/models/ordem_servico.dart';
 import 'package:os_manutencao_ui/screens/orders/order_form_page.dart';
+import 'package:os_manutencao_ui/screens/orders/order_items_page.dart';
+import 'package:os_manutencao_ui/screens/orders/order_evidences_page.dart';
 import 'package:os_manutencao_ui/services/regras_ordem_servico.dart';
 import 'package:os_manutencao_ui/widgets/labeled_value.dart';
 import 'package:os_manutencao_ui/widgets/section_card.dart';
@@ -355,7 +358,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             ),
             _Servico(ordem: _ordem),
             _Financeiro(ordem: _ordem),
-            const _Evidencias(),
+            _Evidencias(ordem: _ordem),
             _Historico(ordemId: _ordem.id),
           ],
         ),
@@ -745,7 +748,7 @@ class _Servico extends StatelessWidget {
   }
 }
 
-class _Financeiro extends StatelessWidget {
+class _Financeiro extends StatefulWidget {
   const _Financeiro({
     required this.ordem,
   });
@@ -753,26 +756,107 @@ class _Financeiro extends StatelessWidget {
   final OrdemServico ordem;
 
   @override
+  State<_Financeiro> createState() => _FinanceiroState();
+}
+
+class _FinanceiroState extends State<_Financeiro> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _carregarMateriais();
+      }
+    });
+  }
+
+  Future<void> _carregarMateriais() async {
+    final ordemId = widget.ordem.id;
+    if (ordemId == null || !mounted) return;
+
+    try {
+      await context.read<ItemUtilizadoController>().carregarPorOrdem(ordemId);
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível carregar os materiais da OS.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _gerenciarMateriais() async {
+    final ordemId = widget.ordem.id;
+    if (ordemId == null) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderItemsPage(
+          ordemId: ordemId,
+          codigo: widget.ordem.codigo,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await _carregarMateriais();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controlador = context.watch<ItemUtilizadoController>();
+    final ordemId = widget.ordem.id;
+
+    // Não apresenta materiais de outra OS caso um filtro antigo
+    // ainda esteja ativo no controlador compartilhado.
+    final dadosDaOrdem = ordemId != null &&
+        controlador.ordemIdFiltro == ordemId;
+    final itens = dadosDaOrdem
+        ? controlador.itens.where((item) => item.ordemId == ordemId).toList()
+        : [];
+
+    final totalMateriaisCentavos = dadosDaOrdem ? controlador.totalCentavos : 0;
+    final totalOrdemCentavos =
+        widget.ordem.valorMaoObraCentavos + totalMateriaisCentavos;
+    final carregando = controlador.carregando || !dadosDaOrdem;
+
     return _TabBody(
       child: Column(
         children: [
           SectionCard(
             title: 'Itens utilizados',
-            subtitle:
-                'O cadastro de peças e materiais será implementado '
-                'na Etapa 7.',
+            subtitle: 'Peças e materiais vinculados a esta ordem de serviço.',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Nenhum item apresentado nesta etapa.',
-                ),
+                if (carregando)
+                  const Text('Carregando materiais...')
+                else if (controlador.erro != null)
+                  Text(controlador.erro!)
+                else if (itens.isEmpty)
+                  const Text('Nenhuma peça ou material cadastrado.')
+                else ...[
+                  for (final item in itens)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        '${item.descricao}: ${item.quantidade} × '
+                        '${_reais(item.valorUnitarioCentavos)} = '
+                        '${_reais(item.subtotalCentavos)}',
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: null,
-                  icon: Icon(Icons.add_box_outlined),
-                  label: Text('Gerenciar itens'),
+                  onPressed: ordemId == null || controlador.carregando
+                      ? null
+                      : _gerenciarMateriais,
+                  icon: const Icon(Icons.add_box_outlined),
+                  label: const Text('Gerenciar itens'),
                 ),
               ],
             ),
@@ -784,22 +868,20 @@ class _Financeiro extends StatelessWidget {
               children: [
                 _MoneyLine(
                   label: 'Mão de obra',
-                  value: _reais(ordem.valorMaoObraCentavos),
+                  value: _reais(widget.ordem.valorMaoObraCentavos),
                 ),
                 const SizedBox(height: 10),
-                const _MoneyLine(
+                _MoneyLine(
                   label: 'Peças / materiais',
-                  value: 'A integrar',
+                  value: carregando
+                      ? 'Carregando...'
+                      : _reais(totalMateriaisCentavos),
                 ),
                 const Divider(height: 30),
                 _MoneyLine(
-                  label: 'Subtotal da mão de obra',
-                  value: _reais(ordem.valorMaoObraCentavos),
+                  label: 'Total da Ordem de Serviço',
+                  value: carregando ? 'Carregando...' : _reais(totalOrdemCentavos),
                   emphasized: true,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'O total completo da OS será calculado na Etapa 7.',
                 ),
               ],
             ),
@@ -841,26 +923,38 @@ class _MoneyLine extends StatelessWidget {
 }
 
 class _Evidencias extends StatelessWidget {
-  const _Evidencias();
+  const _Evidencias({required this.ordem});
+
+  final OrdemServico ordem;
 
   @override
   Widget build(BuildContext context) {
     return _TabBody(
       child: SectionCard(
         title: 'Imagens do atendimento',
-        subtitle:
-            'As evidências serão vinculadas ao SQLite na Etapa 7.',
+        subtitle: 'Fotografias vinculadas a esta ordem de serviço.',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Nenhuma imagem apresentada nesta etapa.',
+              'Adicione, visualize ou exclua fotografias do atendimento.',
             ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
-              onPressed: null,
-              icon: Icon(Icons.add_a_photo_outlined),
-              label: Text('Adicionar evidência'),
+              onPressed: ordem.id == null
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => OrderEvidencesPage(
+                            ordemId: ordem.id!,
+                            codigo: ordem.codigo,
+                          ),
+                        ),
+                      );
+                    },
+              icon: const Icon(Icons.add_a_photo_outlined),
+              label: const Text('Gerenciar evidências'),
             ),
           ],
         ),
