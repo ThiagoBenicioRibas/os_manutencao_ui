@@ -1,5 +1,5 @@
 name: os_manutencao_ui
-description: Interface gráfica em Flutter para um sistema acadêmico de ordens de serviço e manutenção técnica.
+description: Aplicativo Flutter de ordens de serviço e manutenção técnica com persistência local SQLite.
 publish_to: 'none'
 version: 1.0.0+1
 

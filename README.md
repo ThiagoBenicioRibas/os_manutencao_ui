@@ -1,4 +1,8 @@
-﻿# OS Manutenção
+# OS Manutenção
+
+Autor: Thiago Benício Ribas. RU: 4391569.
+
+Repositório: [os_manutencao_ui no GitHub](https://github.com/ThiagoBenicioRibas/os_manutencao_ui.git).
 
 Aplicativo acadêmico Flutter para gerenciar ordens de serviço e manutenção técnica, com persistência local SQLite. A plataforma de trabalho e validação é Windows; os diretórios das demais plataformas não representam compatibilidade já testada.
 
@@ -15,7 +19,7 @@ Aplicativo acadêmico Flutter para gerenciar ordens de serviço e manutenção t
 
 ## Executar no Windows
 
-É necessário Flutter com suporte a desktop Windows, Dart compatível com o projeto e ferramentas C++ do Visual Studio para compilar. As dependências e restrições estão em `pubspec.yaml` e `pubspec.lock`. O projeto já contém a pasta `windows`; não é necessário recriá-lo com `flutter create .`.
+É necessário Flutter com suporte a desktop Windows, Dart compatível com o projeto e ferramentas C++ do Visual Studio para compilar. A auditoria utilizou Flutter 3.47.9 e Dart 3.13.7. As dependências e restrições estão em `pubspec.yaml` e `pubspec.lock`. O projeto já contém a pasta `windows`; não é necessário recriá-lo com `flutter create .`.
 
 Na raiz do projeto, pelo PowerShell:
 
@@ -85,6 +89,23 @@ Esses comandos de fechamento são instruções, não declaração de aprovação
 - Banco e imagens ficam neste computador, sem sincronização remota.
 - A exclusão de uma OS remove registros dependentes no banco; a limpeza de arquivos físicos de evidências órfãos continua pendente.
 - A distinção entre gravação confirmada e falha de recarga foi tratada no controlador de materiais; os demais fluxos ainda precisam dessa revisão geral.
-- Preparar dados suficientes para demonstração (o enunciado recomenda pelo menos dez OS), evidências de persistência, prints, publicação do histórico no GitHub e relatório crítico final em documento de entrega.
+- A entrega utiliza evidências textuais, por opção do aluno que usa NVDA; a ausência de prints será justificada diretamente ao professor.
+- O repositório GitHub foi informado pelo autor. O envio dos commits ao remoto e a submissão acadêmica são etapas separadas do commit local de entrega.
 
-A Etapa 8 está no commit `5ef7c58`. Consulte `docs/CONTINUIDADE.md` para o estado da Etapa 9, validações e pendências antes de continuar.
+A Etapa 8 está no commit `5ef7c58` e a Etapa 9 em `473d8e9`. A auditoria e os materiais acadêmicos integram o commit de entrega posterior à Etapa 9.
+
+## Demonstração e evidências textuais
+
+- [Roteiro de dez OS](docs/ROTEIRO_DEMONSTRACAO.md): cadastros fictícios, transições, valores esperados e conferência de persistência, sem apagar dados existentes.
+- [Auditoria técnica](docs/AUDITORIA_TECNICA.md): resultados executados, cobertura e limites da verificação.
+- [Texto do relatório acadêmico](docs/RELATORIO_FINAL_ACADEMICO.md): fonte textual do documento final, com identificação acadêmica e repositório.
+- [Relatório final UNINTER em Word](docs/RELATORIO_FINAL_UNINTER.docx): documento acadêmico de entrega.
+- [Continuidade](docs/CONTINUIDADE.md): estado atual e próximo passo.
+
+Para reproduzir a verificação integrada em banco temporário, sem popular a base do aplicativo:
+
+```powershell
+flutter test test/auditoria_integracao_test.dart --reporter expanded
+```
+
+Para distribuir o executável, preserve toda a pasta `build/windows/x64/runner/Release`, incluindo DLLs e `data`; o arquivo EXE isolado não constitui a distribuição completa.

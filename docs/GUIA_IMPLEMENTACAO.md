@@ -26,6 +26,6 @@ As camadas reais de modelos, SQLite, repositórios, controladores, cadastros, or
 
 ## Trabalho restante
 
-As correções locais e sua validação estão discriminadas na continuidade. Antes da entrega: revisar coerência geral, executar suíte completa/analyzer/build, preparar dados demonstrativos, verificar reabertura e imagens, atualizar evidências e elaborar relatório crítico. Limpeza de arquivos órfãos e revisão de falha de recarga após gravação nos demais controladores continuam como limitações registradas.
+A Etapa 9 está concluída no commit `473d8e9`. Consulte `AUDITORIA_TECNICA.md` para os resultados da auditoria final, `ROTEIRO_DEMONSTRACAO.md` para reproduzir dez OS e `RELATORIO_FINAL_ACADEMICO.md` para o texto de entrega. As evidências serão textuais; o aluno justificará diretamente ao professor a ausência de prints em razão do uso do NVDA. Limpeza de arquivos órfãos e revisão de falha de recarga após gravação nos demais controladores continuam como limitações registradas. A continuidade discrimina o que ainda aguarda revisão.
 
 O arquivo `lib/core/mock_data.dart` é legado do protótipo, não a fonte do Dashboard real. Comentários antigos não substituem inspeção do código. Não recriar funcionalidades concluídas com base em antigos TODOs.
