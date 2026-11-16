@@ -1,72 +1,32 @@
-# Mapa das telas e dos requisitos visuais
+﻿# Mapa das telas do sistema
 
-## Acesso
-- `lib/screens/auth/login_screen.dart`
-- Campos de identificação e senha.
-- Botão Entrar sem autenticação implementada.
-- Botão separado para visualizar o protótipo.
+## Identificação e navegação
 
-## Estrutura principal
-- `lib/screens/app_shell.dart`
-- NavigationRail em desktop e NavigationDrawer em telas menores.
-- Dashboard, Ordens de serviço, Clientes, Técnicos e Equipamentos.
+- `lib/screens/auth/login_screen.dart`: nome obrigatório, entrada por Enter/botão, validação e foco. Sem senha ou acesso demonstrativo.
+- `lib/screens/app_shell.dart`: navegação lateral ou drawer conforme largura; nome da sessão, ajuda e Sair.
 
 ## Dashboard
-- `lib/screens/dashboard/dashboard_page.dart`
-- Total de ordens.
-- Abertas.
-- Em atendimento.
-- Aguardando peça.
-- Concluídas.
-- Urgentes.
-- Atrasadas.
-- Valor registrado.
-- Distribuição visual por status e ordens que exigem atenção.
 
-## Ordens de serviço
-- `lib/screens/orders/orders_page.dart`
-- Busca por texto.
-- Filtros de status, prioridade e técnico.
-- Cards com código, cliente, equipamento, técnico, prazo, status, prioridade, total e evidências.
+`lib/screens/dashboard/dashboard_page.dart`: total de OS, abertas, em atendimento, aguardando peça, concluídas, urgentes, atrasadas e valor registrado. Distribuição inclui também Atribuída e Cancelada. Até três alertas de ordens pendentes. Cálculos em `DashboardService`, dados dos controladores/repositórios; carga, erro e nova tentativa na tela.
 
-## Nova OS / Editar OS
-- `lib/screens/orders/order_form_page.dart`
-- Cliente e equipamento.
-- Técnico responsável.
-- Descrição do problema.
-- Prioridade.
-- Status.
-- Datas.
-- Diagnóstico.
-- Solução.
-- Mão de obra.
-- Peças/materiais.
-- Total visual.
-- Evidências.
+## Ordens
 
-## Detalhes da OS
-- `lib/screens/orders/order_details_page.dart`
-- Resumo.
-- Serviço.
-- Financeiro.
-- Evidências.
-- Histórico.
-- Confirmação visual de exclusão.
+- `lib/screens/orders/orders_page.dart`: listagem real, busca por código/cliente/equipamento/técnico e filtros de status, prioridade e responsável.
+- `lib/screens/orders/order_form_page.dart`: cliente, equipamento, técnico, problema, prioridade, datas, diagnóstico, solução, observações e mão de obra. Edição preserva o status; materiais e imagens são gerenciados nos detalhes após salvar.
+- `lib/screens/orders/order_details_page.dart`: abas Resumo, Serviço, Financeiro, Evidências e Histórico. Permite editar, alterar status pelo fluxo válido e excluir com confirmação.
+- Aba Financeiro: itens e resumo de mão de obra, materiais e total. Se a consulta falhar, materiais/total ficam indisponíveis e há nova tentativa; valores antigos não são tratados como atuais.
+- `lib/screens/orders/order_items_page.dart`: adicionar, editar e excluir peças/materiais com quantidade e valor unitário.
+- `lib/screens/orders/order_evidences_page.dart`: selecionar arquivo, listar, visualizar e excluir fotografias.
+- Aba Histórico: eventos persistidos de transição de status.
 
-## Clientes
-- `lib/screens/clients/clients_page.dart`
-- `lib/screens/clients/client_form_page.dart`
-- Nome/razão social, CPF/CNPJ/identificação, telefone, e-mail e endereço.
+## Cadastros
 
-## Técnicos
-- `lib/screens/technicians/technicians_page.dart`
-- `lib/screens/technicians/technician_form_page.dart`
-- Nome, contato, especialidade e situação.
+- `lib/screens/clients/clients_page.dart` e `client_form_page.dart`: listagem, cadastro, edição e exclusão de clientes; identificação, telefone, e-mail e endereço.
+- `lib/screens/technicians/technicians_page.dart` e `technician_form_page.dart`: técnicos com contato, especialidade e situação.
+- `lib/screens/equipment/equipment_page.dart` e `equipment_form_page.dart`: cliente, tipo, marca, modelo, série, patrimônio e observações. Cliente não pode ser trocado quando há OS vinculada.
 
-## Equipamentos
-- `lib/screens/equipment/equipment_page.dart`
-- `lib/screens/equipment/equipment_form_page.dart`
-- Cliente, tipo, marca, modelo, série, patrimônio e observações.
+## Acessibilidade e persistência
 
-## Funcionalidades não implementadas
-Todos os pontos onde a lógica deve ser criada estão marcados por `TODO(FUNCIONALIDADE)`.
+As telas usam componentes Material, rótulos, botões identificados e elementos semânticos. Dashboard e identificação foram aprovados manualmente com teclado/NVDA na Etapa 8. A validação das alterações posteriores deve ser registrada separadamente.
+
+Os registros usam SQLite e as fotografias ficam no diretório de suporte do aplicativo. Sessão de identificação é apenas em memória. A plataforma de validação é Windows. Consulte README e CONTINUIDADE para execução, testes e limitações; este mapa descreve a implementação, não comprova validação de todos os fluxos.

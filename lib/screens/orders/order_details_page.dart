@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -58,9 +57,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
 
     try {
-      await context
-          .read<HistoricoStatusController>()
-          .carregarPorOrdem(ordemId);
+      await context.read<HistoricoStatusController>().carregarPorOrdem(ordemId);
     } catch (_) {
       if (!mounted) {
         return;
@@ -182,7 +179,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           ),
         ),
       );
-    } catch (erro) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
@@ -190,7 +187,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Não foi possível alterar o status: $erro',
+            'Não foi possível alterar o status. Confira o técnico, o diagnóstico e a solução e atualize a ordem antes de tentar novamente.',
           ),
         ),
       );
@@ -239,9 +236,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     });
 
     try {
-      await context
-          .read<OrdemServicoController>()
-          .excluir(_ordem.id!);
+      await context.read<OrdemServicoController>().excluir(_ordem.id!);
 
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -293,15 +288,12 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         if (tecnico.id != null) tecnico.id!: tecnico.nome,
     };
 
-    final cliente =
-        nomesClientes[_ordem.clienteId] ?? 'Cliente não encontrado';
+    final cliente = nomesClientes[_ordem.clienteId] ?? 'Cliente não encontrado';
 
     final equipamento =
-        nomesEquipamentos[_ordem.equipamentoId] ??
-            'Equipamento não encontrado';
+        nomesEquipamentos[_ordem.equipamentoId] ?? 'Equipamento não encontrado';
 
-    final tecnico =
-        nomesTecnicos[_ordem.tecnicoId] ?? 'Sem técnico atribuído';
+    final tecnico = nomesTecnicos[_ordem.tecnicoId] ?? 'Sem técnico atribuído';
 
     return DefaultTabController(
       length: 5,
@@ -310,9 +302,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           title: Text(_ordem.codigo),
           actions: [
             TextButton.icon(
-              onPressed: (_excluindo || _alterandoStatus)
-                  ? null
-                  : _editar,
+              onPressed: (_excluindo || _alterandoStatus) ? null : _editar,
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Editar'),
             ),
@@ -391,13 +381,11 @@ class _AlterarStatusDialog extends StatefulWidget {
   final List<String> opcoes;
 
   @override
-  State<_AlterarStatusDialog> createState() =>
-      _AlterarStatusDialogState();
+  State<_AlterarStatusDialog> createState() => _AlterarStatusDialogState();
 }
 
 class _AlterarStatusDialogState extends State<_AlterarStatusDialog> {
-  final TextEditingController _observacaoController =
-      TextEditingController();
+  final TextEditingController _observacaoController = TextEditingController();
 
   String? _statusSelecionado;
 
@@ -485,9 +473,7 @@ class _AlterarStatusDialogState extends State<_AlterarStatusDialog> {
           child: const Text('Cancelar'),
         ),
         FilledButton(
-          onPressed: _statusSelecionado == null
-              ? null
-              : _confirmar,
+          onPressed: _statusSelecionado == null ? null : _confirmar,
           child: const Text('Confirmar alteração'),
         ),
       ],
@@ -512,8 +498,7 @@ String _dataHora(DateTime data) {
   return '${_data(data)} às $horas:$minutos';
 }
 
-String _reais(int centavos) =>
-    'R\$ ${centavos ~/ 100},'
+String _reais(int centavos) => 'R\$ ${centavos ~/ 100},'
     '${(centavos % 100).toString().padLeft(2, '0')}';
 
 String _texto(String? valor) {
@@ -677,23 +662,19 @@ class _Resumo extends StatelessWidget {
           const SizedBox(height: 16),
           SectionCard(
             title: 'Ações disponíveis',
-            subtitle:
-                'As alterações de status são registradas no histórico.',
+            subtitle: 'As alterações de status são registradas no histórico.',
             child: Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
                 FilledButton.tonalIcon(
-                  onPressed: excluindo ||
-                          alterandoStatus ||
-                          !possuiProximosStatus
-                      ? null
-                      : alterarStatus,
+                  onPressed:
+                      excluindo || alterandoStatus || !possuiProximosStatus
+                          ? null
+                          : alterarStatus,
                   icon: const Icon(Icons.sync_alt),
                   label: Text(
-                    alterandoStatus
-                        ? 'Alterando status...'
-                        : 'Alterar status',
+                    alterandoStatus ? 'Alterando status...' : 'Alterar status',
                   ),
                 ),
                 OutlinedButton.icon(
@@ -702,8 +683,7 @@ class _Resumo extends StatelessWidget {
                   label: Text('Gerar comprovante'),
                 ),
                 OutlinedButton.icon(
-                  onPressed:
-                      (excluindo || alterandoStatus) ? null : excluir,
+                  onPressed: (excluindo || alterandoStatus) ? null : excluir,
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('Excluir ordem'),
                 ),
@@ -814,7 +794,8 @@ class _FinanceiroState extends State<_Financeiro> {
     // Não apresenta materiais de outra OS caso um filtro antigo
     // ainda esteja ativo no controlador compartilhado.
     final dadosDaOrdem = ordemId != null &&
-        controlador.ordemIdFiltro == ordemId;
+        controlador.ordemIdFiltro == ordemId &&
+        controlador.dadosDisponiveis;
     final itens = dadosDaOrdem
         ? controlador.itens.where((item) => item.ordemId == ordemId).toList()
         : [];
@@ -822,7 +803,8 @@ class _FinanceiroState extends State<_Financeiro> {
     final totalMateriaisCentavos = dadosDaOrdem ? controlador.totalCentavos : 0;
     final totalOrdemCentavos =
         widget.ordem.valorMaoObraCentavos + totalMateriaisCentavos;
-    final carregando = controlador.carregando || !dadosDaOrdem;
+    final carregando =
+        controlador.carregando || (controlador.erro == null && !dadosDaOrdem);
 
     return _TabBody(
       child: Column(
@@ -836,7 +818,18 @@ class _FinanceiroState extends State<_Financeiro> {
                 if (carregando)
                   const Text('Carregando materiais...')
                 else if (controlador.erro != null)
-                  Text(controlador.erro!)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                          liveRegion: true, child: Text(controlador.erro!)),
+                      TextButton.icon(
+                        onPressed: _carregarMateriais,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Tentar novamente'),
+                      ),
+                    ],
+                  )
                 else if (itens.isEmpty)
                   const Text('Nenhuma peça ou material cadastrado.')
                 else ...[
@@ -875,12 +868,18 @@ class _FinanceiroState extends State<_Financeiro> {
                   label: 'Peças / materiais',
                   value: carregando
                       ? 'Carregando...'
-                      : _reais(totalMateriaisCentavos),
+                      : dadosDaOrdem
+                          ? _reais(totalMateriaisCentavos)
+                          : 'Indisponível',
                 ),
                 const Divider(height: 30),
                 _MoneyLine(
                   label: 'Total da Ordem de Serviço',
-                  value: carregando ? 'Carregando...' : _reais(totalOrdemCentavos),
+                  value: carregando
+                      ? 'Carregando...'
+                      : dadosDaOrdem
+                          ? _reais(totalOrdemCentavos)
+                          : 'Indisponível',
                   emphasized: true,
                 ),
               ],
@@ -996,8 +995,7 @@ class _Historico extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var indice = 0; indice < registros.length; indice++) ...[
-            if (indice > 0)
-              const Divider(height: 28),
+            if (indice > 0) const Divider(height: 28),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1019,10 +1017,7 @@ class _Historico extends StatelessWidget {
                         ),
                       ),
                       if (registros[indice].observacao != null &&
-                          registros[indice]
-                              .observacao!
-                              .trim()
-                              .isNotEmpty) ...[
+                          registros[indice].observacao!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
                           registros[indice].observacao!,
@@ -1041,8 +1036,7 @@ class _Historico extends StatelessWidget {
     return _TabBody(
       child: SectionCard(
         title: 'Histórico da ordem',
-        subtitle:
-            'Registro das mudanças de status desta ordem de serviço.',
+        subtitle: 'Registro das mudanças de status desta ordem de serviço.',
         child: conteudo,
       ),
     );

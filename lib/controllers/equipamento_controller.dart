@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:os_manutencao_ui/models/equipamento.dart';
 import 'package:os_manutencao_ui/repositories/equipamento_repository.dart';
@@ -49,8 +48,8 @@ class EquipamentoController extends ChangeNotifier {
 
     try {
       _equipamentos = await _consultarEquipamentos();
-    } catch (e) {
-      _erro = 'Não foi possível carregar os equipamentos: $e';
+    } catch (_) {
+      _erro = 'Não foi possível carregar os equipamentos. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;
@@ -109,8 +108,8 @@ class EquipamentoController extends ChangeNotifier {
       _equipamentos = await _consultarEquipamentos();
 
       return resultado;
-    } catch (e) {
-      _erro = 'Não foi possível concluir a operação: $e';
+    } catch (_) {
+      _erro = 'Não foi possível concluir a operação. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;

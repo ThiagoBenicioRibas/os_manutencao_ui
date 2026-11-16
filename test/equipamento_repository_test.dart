@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -187,5 +186,43 @@ void main() {
       ),
       throwsA(isA<ArgumentError>()),
     );
+  });
+  test('Troca cliente sem OS e bloqueia com OS, inclusive encerrada', () async {
+    final clienteA = await criarCliente('A');
+    final clienteB = await criarCliente('B');
+    final id = await repositorio
+        .inserir(Equipamento(clienteId: clienteA, tipo: 'Notebook'));
+    expect(
+        await repositorio.atualizar(
+            Equipamento(id: id, clienteId: clienteB, tipo: 'Notebook')),
+        1);
+    final banco = await servico.database;
+    final ordemId = await banco.insert('ordens_servico', {
+      'codigo': 'REG-EQUIP',
+      'cliente_id': clienteB,
+      'equipamento_id': id,
+      'descricao_problema': 'Falha',
+      'prioridade': 'Média',
+      'status': 'Aberta',
+      'data_abertura': DateTime.now().toIso8601String(),
+      'valor_mao_obra_centavos': 0,
+    });
+    for (final status in ['Aberta', 'Concluída', 'Cancelada']) {
+      await banco.update('ordens_servico', {'status': status},
+          where: 'id = ?', whereArgs: [ordemId]);
+      await expectLater(
+          repositorio.atualizar(
+              Equipamento(id: id, clienteId: clienteA, tipo: 'Alterado')),
+          throwsStateError);
+      expect((await repositorio.buscarPorId(id))!.clienteId, clienteB);
+      expect((await repositorio.buscarPorId(id))!.tipo, 'Notebook');
+    }
+    expect(
+        await repositorio.atualizar(Equipamento(
+            id: id, clienteId: clienteB, tipo: 'Notebook', marca: 'Nova')),
+        1);
+    expect((await repositorio.buscarPorId(id))!.marca, 'Nova');
+    expect(
+        (await banco.query('ordens_servico')).single['cliente_id'], clienteB);
   });
 }

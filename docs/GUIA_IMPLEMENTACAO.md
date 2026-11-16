@@ -1,28 +1,31 @@
-# Guia para implementação futura das funcionalidades
+﻿# Guia de implementação e manutenção
 
-A interface foi deixada propositalmente sem lógica de negócio. Os pontos de integração estão marcados com `TODO(FUNCIONALIDADE)`.
+## Estado do sistema
 
-## Ordem sugerida de implementação
+As camadas reais de modelos, SQLite, repositórios, controladores, cadastros, ordens, status, materiais e evidências estão implementadas. A Etapa 8 integrou Dashboard e identificação local. Não use a numeração deste documento como cronograma oficial do professor: `docs/enunciado.docx` é a referência de requisitos, e `docs/CONTINUIDADE.md` registra a etapa atual.
 
-1. Criar os modelos em `lib/models/`: Cliente, Tecnico, Equipamento, OrdemServico, ItemUtilizado e HistoricoStatus.
-2. Criar a persistência em `lib/services/` e `lib/repositories/`.
-3. Criar controladores, providers ou viewmodels em `lib/controllers/`.
-4. Substituir os dados de `lib/core/mock_data.dart` por dados reais vindos dos controladores.
-5. Conectar os formulários aos métodos de cadastro e edição.
-6. Implementar exclusão com confirmação.
-7. Implementar busca e filtros da lista de OS.
-8. Implementar regras de status: Aberta, Atribuída, Em atendimento, Aguardando peça, Concluída e Cancelada.
-9. Implementar regras de prioridade e atraso.
-10. Implementar cálculo de peças, materiais, mão de obra e total.
-11. Implementar seleção/captura de imagens.
-12. Implementar autenticação ou identificação local.
+## Fluxo e responsabilidades
 
-## Convenções de comentários
+1. A tela inicial valida um nome e inicia uma sessão em memória por `IdentificacaoController`; `main.dart` alterna a tela inicial e o aplicativo. Sair encerra essa sessão.
+2. Telas usam controladores ChangeNotifier disponibilizados por Provider; repositórios acessam `DatabaseService`.
+3. Repositórios protegem vínculos de cliente/equipamento e executam alterações sensíveis em transações.
+4. `OrdemServicoRepository.atualizar` é edição comum: rejeita status diferente do persistido, conserva data de conclusão e exige técnico/dados de conclusão conforme o estado. A mudança de status deve usar `alterarStatus`, que valida o fluxo e grava histórico atomicamente.
+5. `EquipamentoRepository.atualizar` impede trocar cliente enquanto houver qualquer OS vinculada. Outros dados continuam editáveis.
+6. Materiais pertencem à OS e usam quantidades inteiras, valores unitários e totais em centavos. `ItemUtilizadoController` limpa dados ao recarregar e ignora consultas antigas; erro de consulta deixa os dados indisponíveis. Gravação confirmada seguida de falha de recarga gera mensagem específica, sem pedir que a gravação seja repetida.
+7. Evidências usam repositório e serviço de cópia para a pasta local; seleção de arquivos é feita pela tela. Não há promessa de captura por câmera nesta versão.
+8. `DashboardService` centraliza indicadores, frações e seleção de alertas; atraso reutiliza `RegrasOrdemServico.estaAtrasada`. A tela consulta listas completas e trata carga/erro.
 
-- `TODO(FUNCIONALIDADE)`: ponto que precisa receber lógica real.
-- `UI APENAS`: trecho usado somente para composição visual.
-- `DADO MOCKADO`: informação fictícia para preencher a tela.
+## Regras e interface
 
-## Observação sobre navegação
+- Ordens novas começam abertas; status posterior é alterado nos detalhes.
+- Atribuição e atendimento exigem técnico. Conclusão exige diagnóstico e solução. Concluída e Cancelada não possuem próximas transições.
+- Valores monetários permanecem inteiros em centavos, inclusive na soma de materiais e mão de obra.
+- O formulário registra mão de obra. Após salvar, Financeiro e Evidências nos detalhes gerenciam materiais e fotografias; não há botões demonstrativos para essas operações no formulário.
+- Não exibir exceções técnicas diretamente nas mensagens dos controladores. Mensagens devem indicar o que falhou e orientar nova tentativa ou conferência dos dados.
+- Manter rótulos, foco de teclado, tooltip e Semantics. Validar com NVDA após mudanças de interface.
 
-A navegação entre as telas está ativa para facilitar a inspeção da interface. Ela não autentica usuários, não salva registros e não aplica regras de negócio.
+## Trabalho restante
+
+As correções locais e sua validação estão discriminadas na continuidade. Antes da entrega: revisar coerência geral, executar suíte completa/analyzer/build, preparar dados demonstrativos, verificar reabertura e imagens, atualizar evidências e elaborar relatório crítico. Limpeza de arquivos órfãos e revisão de falha de recarga após gravação nos demais controladores continuam como limitações registradas.
+
+O arquivo `lib/core/mock_data.dart` é legado do protótipo, não a fonte do Dashboard real. Comentários antigos não substituem inspeção do código. Não recriar funcionalidades concluídas com base em antigos TODOs.

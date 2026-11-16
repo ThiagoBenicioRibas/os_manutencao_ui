@@ -1,4 +1,3 @@
-
 import 'package:os_manutencao_ui/models/historico_status.dart';
 import 'package:os_manutencao_ui/models/ordem_servico.dart';
 import 'package:os_manutencao_ui/services/database_service.dart';
@@ -14,7 +13,7 @@ class OrdemServicoRepository {
 
   /// Verifica se o equipamento pertence ao cliente informado.
   Future<void> _validarEquipamentoCliente(
-    Database banco,
+    DatabaseExecutor banco,
     OrdemServico ordem,
   ) async {
     final equipamentos = await banco.query(
@@ -121,16 +120,47 @@ class OrdemServicoRepository {
 
     final banco = await _databaseService.database;
 
-    await _validarEquipamentoCliente(banco, ordem);
-
-    final dados = ordem.toMap()..remove('id');
-
-    return banco.update(
-      'ordens_servico',
-      dados,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return banco.transaction((transacao) async {
+      final registros = await transacao.query(
+        'ordens_servico',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (registros.isEmpty) {
+        throw StateError('A ordem não foi encontrada. Atualize a lista.');
+      }
+      final atual = OrdemServico.fromMap(registros.single);
+      if (ordem.status != atual.status) {
+        throw StateError('O status mudou. Reabra a ordem antes de editar.');
+      }
+      final exigeTecnico = [
+        'Atribuída',
+        'Em atendimento',
+        'Aguardando peça',
+        'Concluída'
+      ].contains(atual.status);
+      if (exigeTecnico && ordem.tecnicoId == null) {
+        throw StateError('Mantenha um técnico responsável neste status.');
+      }
+      if (atual.status == 'Concluída' &&
+          ((ordem.diagnostico?.trim().isEmpty ?? true) ||
+              (ordem.solucao?.trim().isEmpty ?? true))) {
+        throw StateError(
+            'Uma ordem concluída precisa de diagnóstico e solução.');
+      }
+      await _validarEquipamentoCliente(transacao, ordem);
+      final dados = ordem.toMap()
+        ..remove('id')
+        ..remove('status')
+        ..remove('data_conclusao');
+      return transacao.update(
+        'ordens_servico',
+        dados,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   /// Altera o status de uma ordem e registra seu histórico.
@@ -174,8 +204,7 @@ class OrdemServicoRepository {
       };
 
       if (novoStatus == 'Concluída') {
-        dadosAtualizados['data_conclusao'] =
-            dataAlteracao.toIso8601String();
+        dadosAtualizados['data_conclusao'] = dataAlteracao.toIso8601String();
       }
 
       // Primeira operação: atualiza o status da OS.

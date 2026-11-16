@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:os_manutencao_ui/models/cliente.dart';
 import 'package:os_manutencao_ui/repositories/cliente_repository.dart';
@@ -32,8 +31,8 @@ class ClienteController extends ChangeNotifier {
 
     try {
       _clientes = await _repositorio.listar();
-    } catch (e) {
-      _erro = 'Não foi possível carregar os clientes: $e';
+    } catch (_) {
+      _erro = 'Não foi possível carregar os clientes. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;
@@ -84,8 +83,8 @@ class ClienteController extends ChangeNotifier {
       _clientes = await _repositorio.listar();
 
       return resultado;
-    } catch (e) {
-      _erro = 'Não foi possível concluir a operação: $e';
+    } catch (_) {
+      _erro = 'Não foi possível concluir a operação. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;

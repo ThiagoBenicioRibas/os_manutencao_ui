@@ -1,3 +1,3 @@
-# Controllers / Providers / ViewModels
+﻿# Controllers
 
-TODO(FUNCIONALIDADE): implementar aqui gerenciamento de estado e regras que conectam a interface aos repositórios e serviços.
+ChangeNotifier e Provider conectam telas aos repositórios, mantendo listas, filtros, carregamento e mensagens de erro. IdentificacaoController mantém a sessão local. ItemUtilizadoController controla a validade dos materiais carregados e descarta respostas antigas.

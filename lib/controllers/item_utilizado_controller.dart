@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:os_manutencao_ui/models/item_utilizado.dart';
 import 'package:os_manutencao_ui/repositories/item_utilizado_repository.dart';
@@ -15,10 +14,14 @@ class ItemUtilizadoController extends ChangeNotifier {
   bool _carregando = false;
   String? _erro;
   int? _ordemIdFiltro;
+  int _consulta = 0;
+  bool _dadosCarregados = false;
+
+  bool get dadosDisponiveis =>
+      _dadosCarregados && !_carregando && _erro == null;
 
   /// Lista de itens disponível para a interface.
-  List<ItemUtilizado> get itens =>
-      List<ItemUtilizado>.unmodifiable(_itens);
+  List<ItemUtilizado> get itens => List<ItemUtilizado>.unmodifiable(_itens);
 
   /// Indica se existe uma operação em andamento.
   bool get carregando => _carregando;
@@ -64,18 +67,27 @@ class ItemUtilizadoController extends ChangeNotifier {
 
   /// Recarrega a lista e notifica a interface.
   Future<void> _carregarLista() async {
+    final consulta = ++_consulta;
     _carregando = true;
     _erro = null;
+    _dadosCarregados = false;
+    _itens = [];
     notifyListeners();
 
     try {
-      _itens = await _consultarItens();
-    } catch (e) {
-      _erro = 'Não foi possível carregar os itens utilizados: $e';
+      final itens = await _consultarItens();
+      if (consulta != _consulta) return;
+      _itens = itens;
+      _dadosCarregados = true;
+    } catch (_) {
+      if (consulta != _consulta) return;
+      _erro = 'Não foi possível carregar os materiais. Tente novamente.';
       rethrow;
     } finally {
-      _carregando = false;
-      notifyListeners();
+      if (consulta == _consulta) {
+        _carregando = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -113,16 +125,25 @@ class ItemUtilizadoController extends ChangeNotifier {
   ) async {
     _carregando = true;
     _erro = null;
+    _dadosCarregados = false;
+    _itens = [];
+    ++_consulta;
     notifyListeners();
 
     try {
       final resultado = await operacao();
 
-      _itens = await _consultarItens();
+      try {
+        await _carregarLista();
+      } catch (_) {
+        _erro =
+            'Alteração salva, mas não foi possível atualizar os materiais. Recarregue a lista.';
+      }
 
       return resultado;
-    } catch (e) {
-      _erro = 'Não foi possível concluir a operação: $e';
+    } catch (_) {
+      _erro =
+          'Não foi possível salvar a alteração dos materiais. Confira os dados e tente novamente.';
       rethrow;
     } finally {
       _carregando = false;

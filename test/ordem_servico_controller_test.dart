@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -143,9 +142,9 @@ void main() {
       codigo: 'OS-002',
       clienteId: clienteId,
       equipamentoId: equipamentoId,
-      descricaoProblema: 'Equipamento não liga',
+      descricaoProblema: 'Descrição atualizada',
       prioridade: 'Normal',
-      status: 'Em atendimento',
+      status: 'Aberta',
       dataAbertura: DateTime.utc(2026, 11, 9),
       valorMaoObraCentavos: 0,
     );
@@ -158,7 +157,7 @@ void main() {
     expect(controlador.ordens.length, 1);
     expect(
       controlador.ordens.first.status,
-      'Em atendimento',
+      'Aberta',
     );
 
     final excluidos = await controlador.excluir(id);

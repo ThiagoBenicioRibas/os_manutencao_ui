@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:os_manutencao_ui/models/ordem_servico.dart';
 import 'package:os_manutencao_ui/repositories/ordem_servico_repository.dart';
@@ -19,8 +18,7 @@ class OrdemServicoController extends ChangeNotifier {
   int? _tecnicoIdFiltro;
 
   /// Lista de ordens disponível para a interface.
-  List<OrdemServico> get ordens =>
-      List<OrdemServico>.unmodifiable(_ordens);
+  List<OrdemServico> get ordens => List<OrdemServico>.unmodifiable(_ordens);
 
   /// Indica se uma operação está em andamento.
   bool get carregando => _carregando;
@@ -82,8 +80,9 @@ class OrdemServicoController extends ChangeNotifier {
 
     try {
       _ordens = await _consultarOrdens();
-    } catch (e) {
-      _erro = 'Não foi possível carregar as ordens de serviço: $e';
+    } catch (_) {
+      _erro =
+          'Não foi possível carregar as ordens de serviço. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;
@@ -164,8 +163,8 @@ class OrdemServicoController extends ChangeNotifier {
       _ordens = await _consultarOrdens();
 
       return resultado;
-    } catch (e) {
-      _erro = 'Não foi possível concluir a operação: $e';
+    } catch (_) {
+      _erro = 'Não foi possível concluir a operação. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;

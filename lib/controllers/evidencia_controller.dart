@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:os_manutencao_ui/models/evidencia.dart';
 import 'package:os_manutencao_ui/repositories/evidencia_repository.dart';
@@ -21,8 +20,7 @@ class EvidenciaController extends ChangeNotifier {
   int? _ordemIdFiltro;
 
   /// Evidências disponíveis para a interface.
-  List<Evidencia> get evidencias =>
-      List<Evidencia>.unmodifiable(_evidencias);
+  List<Evidencia> get evidencias => List<Evidencia>.unmodifiable(_evidencias);
 
   /// Indica se uma operação está em andamento.
   bool get carregando => _carregando;
@@ -67,9 +65,8 @@ class EvidenciaController extends ChangeNotifier {
 
     try {
       _evidencias = await _consultarEvidencias();
-    } catch (e) {
-      _erro =
-          'Não foi possível carregar as evidências: $e';
+    } catch (_) {
+      _erro = 'Não foi possível carregar as evidências. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;
@@ -120,8 +117,8 @@ class EvidenciaController extends ChangeNotifier {
       _evidencias = await _consultarEvidencias();
 
       return resultado;
-    } catch (e) {
-      _erro = 'Não foi possível concluir a operação: $e';
+    } catch (_) {
+      _erro = 'Não foi possível concluir a operação. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;

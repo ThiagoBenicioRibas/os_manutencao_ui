@@ -60,15 +60,18 @@ class _OrderFormPageState extends State<OrderFormPage> {
     _dataAbertura = ordem?.dataAbertura ?? DateTime.now();
     _prazoPrevisto = ordem?.prazoPrevisto;
 
-    _problemaController = TextEditingController(text: ordem?.descricaoProblema ?? '');
-    _diagnosticoController = TextEditingController(text: ordem?.diagnostico ?? '');
+    _problemaController =
+        TextEditingController(text: ordem?.descricaoProblema ?? '');
+    _diagnosticoController =
+        TextEditingController(text: ordem?.diagnostico ?? '');
     _solucaoController = TextEditingController(text: ordem?.solucao ?? '');
     _observacoesController =
         TextEditingController(text: ordem?.observacoesAtendimento ?? '');
     _maoObraController = TextEditingController(
       text: _formatarCentavos(ordem?.valorMaoObraCentavos ?? 0),
     );
-    _aberturaController = TextEditingController(text: _formatarData(_dataAbertura));
+    _aberturaController =
+        TextEditingController(text: _formatarData(_dataAbertura));
     _prazoController = TextEditingController(
       text: _prazoPrevisto == null ? '' : _formatarData(_prazoPrevisto!),
     );
@@ -104,7 +107,9 @@ class _OrderFormPageState extends State<OrderFormPage> {
   }
 
   String? _validarObrigatorio(String? valor) =>
-      valor == null || valor.trim().isEmpty ? 'Este campo é obrigatório.' : null;
+      valor == null || valor.trim().isEmpty
+          ? 'Este campo é obrigatório.'
+          : null;
 
   String? _validarMaoObra(String? valor) {
     final texto = (valor ?? '').trim();
@@ -140,7 +145,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _erroCarga = 'Não foi possível carregar clientes, equipamentos e técnicos.';
+          _erroCarga =
+              'Não foi possível carregar clientes, equipamentos e técnicos.';
         });
       }
     } finally {
@@ -149,13 +155,16 @@ class _OrderFormPageState extends State<OrderFormPage> {
   }
 
   Future<void> _selecionarData({required bool abertura}) async {
-    final dataAtual = abertura ? _dataAbertura : (_prazoPrevisto ?? DateTime.now());
+    final dataAtual =
+        abertura ? _dataAbertura : (_prazoPrevisto ?? DateTime.now());
     final selecionada = await showDatePicker(
       context: context,
       initialDate: dataAtual,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: abertura ? 'Selecionar data de abertura' : 'Selecionar prazo previsto',
+      helpText: abertura
+          ? 'Selecionar data de abertura'
+          : 'Selecionar prazo previsto',
     );
     if (!mounted || selecionada == null) return;
     setState(() {
@@ -172,7 +181,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
 
   String _gerarCodigo() {
     final instante = DateTime.now().microsecondsSinceEpoch;
-    final aleatorio = Random.secure().nextInt(1000000).toString().padLeft(6, '0');
+    final aleatorio =
+        Random.secure().nextInt(1000000).toString().padLeft(6, '0');
     return 'OS-$instante-$aleatorio';
   }
 
@@ -188,9 +198,12 @@ class _OrderFormPageState extends State<OrderFormPage> {
     if (clienteId == null || equipamentoId == null) return;
 
     final equipamentos = context.read<EquipamentoController>().equipamentos;
-    if (!equipamentos.any((e) => e.id == equipamentoId && e.clienteId == clienteId)) {
+    if (!equipamentos
+        .any((e) => e.id == equipamentoId && e.clienteId == clienteId)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('O equipamento não pertence ao cliente selecionado.')),
+        const SnackBar(
+            content:
+                Text('O equipamento não pertence ao cliente selecionado.')),
       );
       return;
     }
@@ -230,7 +243,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Não foi possível salvar a ordem. Confira os dados e tente novamente.'),
+          content: Text(
+              'Não foi possível salvar a ordem. Confira os dados e tente novamente.'),
         ),
       );
     } finally {
@@ -260,7 +274,9 @@ class _OrderFormPageState extends State<OrderFormPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Editar ordem de serviço' : 'Nova ordem de serviço'),
+        title: Text(widget.isEditing
+            ? 'Editar ordem de serviço'
+            : 'Nova ordem de serviço'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -283,7 +299,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                   const SizedBox(height: 20),
                   SectionCard(
                     title: 'Identificação e vínculo',
-                    subtitle: 'Associe a ordem ao cliente, equipamento e técnico responsável.',
+                    subtitle:
+                        'Associe a ordem ao cliente, equipamento e técnico responsável.',
                     child: Column(
                       children: [
                         if (_carregandoVinculos) ...[
@@ -299,13 +316,15 @@ class _OrderFormPageState extends State<OrderFormPage> {
                             label: const Text('Tentar novamente'),
                           ),
                         ] else if (clientes.isEmpty) ...[
-                          const Text('Cadastre um cliente antes de abrir uma ordem de serviço.'),
+                          const Text(
+                              'Cadastre um cliente antes de abrir uma ordem de serviço.'),
                           const SizedBox(height: 16),
                         ],
                         _ResponsiveFields(
                           children: [
                             TextFormField(
-                              initialValue: widget.order?.codigo ?? 'Gerado ao salvar',
+                              initialValue:
+                                  widget.order?.codigo ?? 'Gerado ao salvar',
                               readOnly: true,
                               decoration: const InputDecoration(
                                 labelText: 'Número / código da OS',
@@ -313,7 +332,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                               ),
                             ),
                             DropdownButtonFormField<int>(
-                              key: ValueKey('cliente-$_carregandoVinculos-$_clienteId'),
+                              key: ValueKey(
+                                  'cliente-$_carregandoVinculos-$_clienteId'),
                               initialValue: clienteExiste ? _clienteId : null,
                               isExpanded: true,
                               decoration: const InputDecoration(
@@ -325,7 +345,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                   if (c.id != null)
                                     DropdownMenuItem(
                                       value: c.id!,
-                                      child: Text(c.nome, overflow: TextOverflow.ellipsis),
+                                      child: Text(c.nome,
+                                          overflow: TextOverflow.ellipsis),
                                     ),
                               ],
                               onChanged: _salvando || _carregandoVinculos
@@ -334,15 +355,20 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                         _clienteId = valor;
                                         _equipamentoId = null;
                                       }),
-                              validator: (valor) => valor == null ? 'Selecione um cliente.' : null,
+                              validator: (valor) => valor == null
+                                  ? 'Selecione um cliente.'
+                                  : null,
                             ),
                             DropdownButtonFormField<int>(
-                              key: ValueKey('equipamento-$_clienteId-$_carregandoVinculos'),
-                              initialValue: equipamentoExiste ? _equipamentoId : null,
+                              key: ValueKey(
+                                  'equipamento-$_clienteId-$_carregandoVinculos'),
+                              initialValue:
+                                  equipamentoExiste ? _equipamentoId : null,
                               isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Equipamento *',
-                                prefixIcon: Icon(Icons.precision_manufacturing_outlined),
+                                prefixIcon: Icon(
+                                    Icons.precision_manufacturing_outlined),
                               ),
                               items: [
                                 for (final e in equipamentosDoCliente)
@@ -360,12 +386,15 @@ class _OrderFormPageState extends State<OrderFormPage> {
                               ],
                               onChanged: _salvando || _clienteId == null
                                   ? null
-                                  : (valor) => setState(() => _equipamentoId = valor),
-                              validator: (valor) =>
-                                  valor == null ? 'Selecione um equipamento do cliente.' : null,
+                                  : (valor) =>
+                                      setState(() => _equipamentoId = valor),
+                              validator: (valor) => valor == null
+                                  ? 'Selecione um equipamento do cliente.'
+                                  : null,
                             ),
                             DropdownButtonFormField<int>(
-                              key: ValueKey('tecnico-$_carregandoVinculos-$_tecnicoId'),
+                              key: ValueKey(
+                                  'tecnico-$_carregandoVinculos-$_tecnicoId'),
                               initialValue: tecnicoExiste ? _tecnicoId : 0,
                               isExpanded: true,
                               decoration: const InputDecoration(
@@ -373,17 +402,21 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                 prefixIcon: Icon(Icons.engineering_outlined),
                               ),
                               items: [
-                                const DropdownMenuItem(value: 0, child: Text('Sem técnico atribuído')),
+                                const DropdownMenuItem(
+                                    value: 0,
+                                    child: Text('Sem técnico atribuído')),
                                 for (final t in tecnicosDisponiveis)
                                   if (t.id != null)
                                     DropdownMenuItem(
                                       value: t.id!,
-                                      child: Text(t.nome, overflow: TextOverflow.ellipsis),
+                                      child: Text(t.nome,
+                                          overflow: TextOverflow.ellipsis),
                                     ),
                               ],
                               onChanged: _salvando
                                   ? null
-                                  : (valor) => setState(() => _tecnicoId = valor ?? 0),
+                                  : (valor) =>
+                                      setState(() => _tecnicoId = valor ?? 0),
                             ),
                           ],
                         ),
@@ -393,7 +426,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                   const SizedBox(height: 16),
                   SectionCard(
                     title: 'Atendimento, prioridade e prazo',
-                    subtitle: 'Campos principais para acompanhar o ciclo da ordem.',
+                    subtitle:
+                        'Campos principais para acompanhar o ciclo da ordem.',
                     child: Column(
                       children: [
                         TextFormField(
@@ -418,11 +452,13 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                 prefixIcon: Icon(Icons.flag_outlined),
                               ),
                               items: const ['Baixa', 'Média', 'Alta', 'Urgente']
-                                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                                  .map((s) => DropdownMenuItem(
+                                      value: s, child: Text(s)))
                                   .toList(),
                               onChanged: _salvando
                                   ? null
-                                  : (valor) => setState(() => _prioridade = valor ?? _prioridade),
+                                  : (valor) => setState(
+                                      () => _prioridade = valor ?? _prioridade),
                             ),
                             DropdownButtonFormField<String>(
                               initialValue: _status,
@@ -431,10 +467,18 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                 prefixIcon: Icon(Icons.sync_alt),
                               ),
                               items: const [
-                                'Aberta', 'Atribuída', 'Em atendimento',
-                                'Aguardando peça', 'Concluída', 'Cancelada',
-                              ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                              onChanged: null, // Transições de status serão implementadas na Etapa 6.
+                                'Aberta',
+                                'Atribuída',
+                                'Em atendimento',
+                                'Aguardando peça',
+                                'Concluída',
+                                'Cancelada',
+                              ]
+                                  .map((s) => DropdownMenuItem(
+                                      value: s, child: Text(s)))
+                                  .toList(),
+                              onChanged:
+                                  null, // Transições de status serão implementadas na Etapa 6.
                             ),
                             TextFormField(
                               controller: _aberturaController,
@@ -444,8 +488,11 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                 prefixIcon: const Icon(Icons.event_outlined),
                                 suffixIcon: IconButton(
                                   tooltip: 'Selecionar data de abertura',
-                                  onPressed: _salvando ? null : () => _selecionarData(abertura: true),
-                                  icon: const Icon(Icons.calendar_month_outlined),
+                                  onPressed: _salvando
+                                      ? null
+                                      : () => _selecionarData(abertura: true),
+                                  icon:
+                                      const Icon(Icons.calendar_month_outlined),
                                 ),
                               ),
                             ),
@@ -457,13 +504,16 @@ class _OrderFormPageState extends State<OrderFormPage> {
                                   readOnly: true,
                                   decoration: InputDecoration(
                                     labelText: 'Prazo previsto *',
-                                    prefixIcon: const Icon(Icons.event_busy_outlined),
+                                    prefixIcon:
+                                        const Icon(Icons.event_busy_outlined),
                                     suffixIcon: IconButton(
                                       tooltip: 'Selecionar prazo previsto',
                                       onPressed: _salvando
                                           ? null
-                                          : () => _selecionarData(abertura: false),
-                                      icon: const Icon(Icons.calendar_month_outlined),
+                                          : () =>
+                                              _selecionarData(abertura: false),
+                                      icon: const Icon(
+                                          Icons.calendar_month_outlined),
                                     ),
                                     errorText: _mostrarErroPrazo
                                         ? 'Selecione um prazo previsto.'
@@ -480,7 +530,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                   const SizedBox(height: 16),
                   SectionCard(
                     title: 'Diagnóstico e solução',
-                    subtitle: 'Registre a análise técnica e a solução aplicada ao atendimento.',
+                    subtitle:
+                        'Registre a análise técnica e a solução aplicada ao atendimento.',
                     child: Column(
                       children: [
                         TextFormField(
@@ -523,42 +574,23 @@ class _OrderFormPageState extends State<OrderFormPage> {
                   ),
                   const SizedBox(height: 16),
                   SectionCard(
-                    title: 'Peças, materiais e valores',
-                    subtitle: 'A interface prevê mão de obra, peças e valor total da OS.',
+                    title: 'Mão de obra',
+                    subtitle:
+                        'Informe o valor da mão de obra deste atendimento.',
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _ResponsiveFields(
-                          children: [
-                            TextFormField(
-                              controller: _maoObraController,
-                              enabled: !_salvando,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              validator: _validarMaoObra,
-                              onChanged: (_) => setState(() {}),
-                              decoration: const InputDecoration(
-                                labelText: 'Valor da mão de obra',
-                                prefixText: 'R\$ ',
-                                prefixIcon: Icon(Icons.handyman_outlined),
-                              ),
-                            ),
-                            TextFormField(
-                              initialValue: '0,00',
-                              readOnly: true,
-                              decoration: InputDecoration(
-                                labelText: 'Valor de peças / materiais',
-                                prefixText: 'R\$ ',
-                                prefixIcon: Icon(Icons.inventory_2_outlined),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton.icon(
-                            onPressed: null,
-                            icon: Icon(Icons.add_box_outlined),
-                            label: Text('Adicionar peça ou material'),
+                        TextFormField(
+                          controller: _maoObraController,
+                          enabled: !_salvando,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          validator: _validarMaoObra,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            labelText: 'Valor da mão de obra',
+                            prefixText: 'R\$ ',
+                            prefixIcon: Icon(Icons.handyman_outlined),
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -566,7 +598,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
@@ -575,11 +608,16 @@ class _OrderFormPageState extends State<OrderFormPage> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text('Subtotal da mão de obra',
-                                    style: Theme.of(context).textTheme.titleMedium),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
                               ),
                               Text(
                                 'R\$ ${_validarMaoObra(_maoObraController.text) == null ? _formatarCentavos(_maoObraEmCentavos()) : '0,00'}',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w800,
                                     ),
                               ),
@@ -587,36 +625,21 @@ class _OrderFormPageState extends State<OrderFormPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Peças e materiais serão integrados na Etapa 7.'),
+                        const Text(
+                          'Após salvar, abra os detalhes da OS e acesse a aba '
+                          'Financeiro para gerenciar peças e materiais e consultar '
+                          'o valor total.',
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
-                  SectionCard(
+                  const SectionCard(
                     title: 'Imagens e evidências',
-                    subtitle: 'Área reservada para fotos antes/depois, defeitos e peças substituídas.',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _EvidencePlaceholder(label: 'Antes da manutenção'),
-                            _EvidencePlaceholder(label: 'Defeito encontrado'),
-                            _EvidencePlaceholder(label: 'Após manutenção'),
-                          ],
-                        ),
-                        SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          onPressed: null,
-                          icon: Icon(Icons.add_a_photo_outlined),
-                          label: Text('Adicionar imagem'),
-                        ),
-                      ],
+                    subtitle: 'Fotografias vinculadas ao atendimento.',
+                    child: Text(
+                      'Após salvar, abra os detalhes da OS e acesse a aba '
+                      'Evidências para adicionar ou consultar fotografias.',
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -624,7 +647,9 @@ class _OrderFormPageState extends State<OrderFormPage> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: _salvando ? null : () => Navigator.of(context).pop(),
+                        onPressed: _salvando
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: const Text('Cancelar'),
                       ),
                       const SizedBox(width: 12),
@@ -634,7 +659,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.save_outlined),
                         label: Text(
@@ -688,37 +714,6 @@ class _ResponsiveFields extends StatelessWidget {
               .toList(),
         );
       },
-    );
-  }
-}
-
-class _EvidencePlaceholder extends StatelessWidget {
-  const _EvidencePlaceholder({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Espaço para imagem: $label',
-      child: Container(
-        width: 190,
-        height: 120,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-          color: Theme.of(context).colorScheme.surfaceContainerLow,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.image_outlined, size: 34),
-            const SizedBox(height: 8),
-            Text(label, textAlign: TextAlign.center),
-          ],
-        ),
-      ),
     );
   }
 }

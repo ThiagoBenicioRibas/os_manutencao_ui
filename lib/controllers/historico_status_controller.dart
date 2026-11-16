@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:os_manutencao_ui/models/historico_status.dart';
 import 'package:os_manutencao_ui/repositories/historico_status_repository.dart';
@@ -60,8 +59,9 @@ class HistoricoStatusController extends ChangeNotifier {
 
     try {
       _historicos = await _consultarHistoricos();
-    } catch (e) {
-      _erro = 'Não foi possível carregar o histórico de status: $e';
+    } catch (_) {
+      _erro =
+          'Não foi possível carregar o histórico de status. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;
@@ -88,8 +88,8 @@ class HistoricoStatusController extends ChangeNotifier {
       _historicos = await _consultarHistoricos();
 
       return id;
-    } catch (e) {
-      _erro = 'Não foi possível registrar o histórico: $e';
+    } catch (_) {
+      _erro = 'Não foi possível registrar o histórico. Tente novamente.';
       rethrow;
     } finally {
       _carregando = false;

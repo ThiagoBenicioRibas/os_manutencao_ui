@@ -1,5 +1,3 @@
-# Models
+﻿# Models
 
-Pasta reservada para os modelos reais de domínio.
-
-TODO(FUNCIONALIDADE): criar aqui as classes Cliente, Tecnico, Equipamento, OrdemServico, ItemUtilizado e demais entidades necessárias.
+Entidades Cliente, Tecnico, Equipamento, OrdemServico, ItemUtilizado, HistoricoStatus e Evidencia. Convertem dados para/de registros SQLite; ItemUtilizado calcula o subtotal em centavos.

@@ -1,4 +1,3 @@
-
 import 'package:os_manutencao_ui/models/equipamento.dart';
 import 'package:os_manutencao_ui/services/database_service.dart';
 
@@ -78,14 +77,37 @@ class EquipamentoRepository {
 
     final banco = await _databaseService.database;
 
-    final dados = equipamento.toMap()..remove('id');
-
-    return banco.update(
-      'equipamentos',
-      dados,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return banco.transaction((transacao) async {
+      final registros = await transacao.query(
+        'equipamentos',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (registros.isEmpty) {
+        throw StateError('O equipamento não foi encontrado. Atualize a lista.');
+      }
+      if (registros.single['cliente_id'] != equipamento.clienteId) {
+        final ordens = await transacao.query(
+          'ordens_servico',
+          columns: ['id'],
+          where: 'equipamento_id = ?',
+          whereArgs: [id],
+          limit: 1,
+        );
+        if (ordens.isNotEmpty) {
+          throw StateError(
+              'Não é possível trocar o cliente de um equipamento com ordens vinculadas.');
+        }
+      }
+      final dados = equipamento.toMap()..remove('id');
+      return transacao.update(
+        'equipamentos',
+        dados,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   /// Exclui um equipamento pelo identificador.
