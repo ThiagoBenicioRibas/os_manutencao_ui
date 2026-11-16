@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:os_manutencao_ui/repositories/item_utilizado_repository.dart';
+import 'package:os_manutencao_ui/services/dashboard_service.dart';
 
 import 'package:os_manutencao_ui/controllers/cliente_controller.dart';
 import 'package:os_manutencao_ui/controllers/equipamento_controller.dart';
@@ -13,10 +15,7 @@ import 'package:os_manutencao_ui/screens/orders/order_details_page.dart';
 import 'package:os_manutencao_ui/screens/orders/order_form_page.dart';
 import 'package:os_manutencao_ui/widgets/section_card.dart';
 
-/// Painel inicial que mantém os KPIs demonstrativos do professor.
-///
-/// As ordens exibidas em "Atenção necessária" vêm do SQLite.
-/// Os indicadores estáticos serão integrados na etapa de Dashboard.
+/// Painel calculado a partir dos registros persistidos.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -27,6 +26,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   bool _carregando = true;
   String? _erro;
+  DashboardResumo? _resumo;
 
   @override
   void initState() {
@@ -41,16 +41,24 @@ class _DashboardPageState extends State<DashboardPage> {
       _carregando = true;
       _erro = null;
     });
+    final ordens = context.read<OrdemServicoController>();
     try {
       await Future.wait([
-        context.read<OrdemServicoController>().carregar(),
+        ordens.carregar(),
         context.read<ClienteController>().carregar(),
         context.read<EquipamentoController>().carregar(),
         context.read<TecnicoController>().carregar(),
       ]);
+      final itens = await ItemUtilizadoRepository().listar();
+      final resumo = const DashboardService().calcular(
+        ordens: ordens.ordens,
+        itens: itens,
+      );
+      if (mounted) setState(() => _resumo = resumo);
     } catch (_) {
       if (mounted) {
-        setState(() => _erro = 'Não foi possível consultar as ordens.');
+        setState(() =>
+            _erro = 'Não foi possível carregar o Dashboard. Tente novamente.');
       }
     } finally {
       if (mounted) setState(() => _carregando = false);
@@ -58,36 +66,24 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _abrirFormulario([OrdemServico? ordem]) async {
-    final salvou = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => OrderFormPage(order: ordem)),
     );
-    if (!mounted || salvou != true) return;
+    if (!mounted) return;
     await _carregar();
   }
 
   Future<void> _abrirDetalhes(OrdemServico ordem) async {
-    final excluiu = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => OrderDetailsPage(order: ordem)),
     );
-    if (!mounted || excluiu != true) return;
+    if (!mounted) return;
     await _carregar();
-  }
-
-  bool _estaAtrasada(OrdemServico ordem) {
-    final prazo = ordem.prazoPrevisto;
-    if (prazo == null ||
-        ordem.status == 'Concluída' ||
-        ordem.status == 'Cancelada') {
-      return false;
-    }
-    final hoje = DateTime.now();
-    return DateTime(prazo.year, prazo.month, prazo.day)
-        .isBefore(DateTime(hoje.year, hoje.month, hoje.day));
   }
 
   @override
   Widget build(BuildContext context) {
-    final ordens = context.watch<OrdemServicoController>().ordens;
+    final resumo = _carregando || _erro != null ? null : _resumo;
     final clientes = {
       for (final c in context.watch<ClienteController>().clientes)
         if (c.id != null) c.id!: c.nome,
@@ -104,10 +100,7 @@ class _DashboardPageState extends State<DashboardPage> {
       for (final t in context.watch<TecnicoController>().tecnicos)
         if (t.id != null) t.id!: t.nome,
     };
-    final alertas = ordens.where((ordem) =>
-        ordem.prioridade == 'Urgente' ||
-        ordem.status == 'Aguardando peça' ||
-        _estaAtrasada(ordem)).take(3).toList();
+    final alertas = resumo?.alertas ?? <OrdemServico>[];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -119,7 +112,7 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               AppPageHeader(
                 title: 'Dashboard',
-                subtitle: 'Indicadores demonstrativos nesta etapa. Ordens em atenção são reais.',
+                subtitle: 'Resumo das ordens de serviço registradas.',
                 actions: [
                   FilledButton.icon(
                     onPressed: _carregando ? null : () => _abrirFormulario(),
@@ -132,7 +125,11 @@ class _DashboardPageState extends State<DashboardPage> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
-                  final columns = width >= 1180 ? 4 : width >= 700 ? 2 : 1;
+                  final columns = width >= 1180
+                      ? 4
+                      : width >= 700
+                          ? 2
+                          : 1;
                   final cardWidth = (width - ((columns - 1) * 16)) / columns;
 
                   return Wrap(
@@ -141,74 +138,81 @@ class _DashboardPageState extends State<DashboardPage> {
                     children: [
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Total de ordens',
-                          value: '42',
+                          value: resumo?.total.toString() ?? 'Indisponível',
                           icon: Icons.assignment_outlined,
                           helper: 'Todos os status',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Ordens abertas',
-                          value: '8',
+                          value: resumo?.quantidade('Aberta').toString() ??
+                              'Indisponível',
                           icon: Icons.mark_email_unread_outlined,
                           helper: 'Aguardando atribuição',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Em atendimento',
-                          value: '11',
+                          value:
+                              resumo?.quantidade('Em atendimento').toString() ??
+                                  'Indisponível',
                           icon: Icons.handyman_outlined,
                           helper: 'Atendimento em execução',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Aguardando peça',
-                          value: '5',
+                          value: resumo
+                                  ?.quantidade('Aguardando peça')
+                                  .toString() ??
+                              'Indisponível',
                           icon: Icons.inventory_2_outlined,
                           helper: 'Dependem de material',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Concluídas',
-                          value: '18',
+                          value: resumo?.quantidade('Concluída').toString() ??
+                              'Indisponível',
                           icon: Icons.task_alt_outlined,
                           helper: 'Atendimentos finalizados',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Urgentes',
-                          value: '4',
+                          value: resumo?.urgentes.toString() ?? 'Indisponível',
                           icon: Icons.priority_high,
-                          helper: 'Prioridade crítica',
+                          helper: 'Prioridade urgente em todos os status',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Atrasadas',
-                          value: '3',
+                          value: resumo?.atrasadas.toString() ?? 'Indisponível',
                           icon: Icons.warning_amber_outlined,
-                          helper: 'Prazo vencido e não concluídas',
+                          helper: 'Pendentes com prazo vencido',
                         ),
                       ),
                       SizedBox(
                         width: cardWidth,
-                        child: const KpiCard(
+                        child: KpiCard(
                           label: 'Valor registrado',
-                          value: 'R\$ 18.640,00',
+                          value: resumo?.valorFormatado ?? 'Indisponível',
                           icon: Icons.payments_outlined,
-                          helper: 'Peças e mão de obra',
+                          helper: 'Peças e mão de obra de todos os status',
                         ),
                       ),
                     ],
@@ -221,30 +225,37 @@ class _DashboardPageState extends State<DashboardPage> {
                   final wide = constraints.maxWidth >= 980;
                   final distribution = SectionCard(
                     title: 'Distribuição por status',
-                    subtitle: 'Representação visual estática para o protótipo.',
-                    child: const Column(
-                      children: [
-                        _ProgressLine(label: 'Abertas', value: 8, total: 42),
-                        SizedBox(height: 14),
-                        _ProgressLine(label: 'Em atendimento', value: 11, total: 42),
-                        SizedBox(height: 14),
-                        _ProgressLine(label: 'Aguardando peça', value: 5, total: 42),
-                        SizedBox(height: 14),
-                        _ProgressLine(label: 'Concluídas', value: 18, total: 42),
-                      ],
-                    ),
+                    subtitle: 'Todas as ordens, agrupadas por status.',
+                    child: resumo == null
+                        ? const Text('Distribuição indisponível.')
+                        : Column(
+                            children: [
+                              for (final status in resumo.porStatus.keys)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: _ProgressLine(
+                                      label: status,
+                                      value: resumo.quantidade(status),
+                                      total: resumo.total,
+                                      fraction: resumo.fracao(status)),
+                                ),
+                            ],
+                          ),
                   );
 
                   final alerts = SectionCard(
                     title: 'Atenção necessária',
-                    subtitle: 'Ordens reais urgentes, atrasadas ou aguardando material.',
+                    subtitle:
+                        'Até três ordens pendentes urgentes, atrasadas ou aguardando material.',
                     child: _carregando
-                        ? const LinearProgressIndicator()
+                        ? const LinearProgressIndicator(
+                            semanticsLabel: 'Carregando Dashboard')
                         : _erro != null
                             ? Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(_erro!),
+                                  Semantics(
+                                      liveRegion: true, child: Text(_erro!)),
                                   TextButton.icon(
                                     onPressed: _carregar,
                                     icon: const Icon(Icons.refresh),
@@ -253,22 +264,28 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ],
                               )
                             : alertas.isEmpty
-                                ? const Text('Nenhuma ordem exige atenção no momento.')
+                                ? const Text(
+                                    'Nenhuma ordem exige atenção no momento.')
                                 : Column(
                                     children: [
                                       for (final ordem in alertas)
                                         Padding(
-                                          padding: const EdgeInsets.only(bottom: 12),
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
                                           child: OrderCard(
                                             order: ordem,
-                                            cliente: clientes[ordem.clienteId] ??
-                                                'Cliente não encontrado',
-                                            equipamento: equipamentos[ordem.equipamentoId] ??
+                                            cliente:
+                                                clientes[ordem.clienteId] ??
+                                                    'Cliente não encontrado',
+                                            equipamento: equipamentos[
+                                                    ordem.equipamentoId] ??
                                                 'Equipamento não encontrado',
-                                            tecnico: tecnicos[ordem.tecnicoId] ??
-                                                'Sem técnico atribuído',
+                                            tecnico:
+                                                tecnicos[ordem.tecnicoId] ??
+                                                    'Sem técnico atribuído',
                                             onView: () => _abrirDetalhes(ordem),
-                                            onEdit: () => _abrirFormulario(ordem),
+                                            onEdit: () =>
+                                                _abrirFormulario(ordem),
                                           ),
                                         ),
                                     ],
@@ -277,7 +294,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
                   if (!wide) {
                     return Column(
-                      children: [distribution, const SizedBox(height: 16), alerts],
+                      children: [
+                        distribution,
+                        const SizedBox(height: 16),
+                        alerts
+                      ],
                     );
                   }
 
@@ -304,15 +325,16 @@ class _ProgressLine extends StatelessWidget {
     required this.label,
     required this.value,
     required this.total,
+    required this.fraction,
   });
 
   final String label;
   final int value;
   final int total;
+  final double fraction;
 
   @override
   Widget build(BuildContext context) {
-    final fraction = value / total;
     return Semantics(
       label: '$label: $value de $total ordens',
       child: Column(

@@ -1,6 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:os_manutencao_ui/controllers/identificacao_controller.dart';
+import 'package:os_manutencao_ui/screens/app_shell.dart';
 
 import 'package:os_manutencao_ui/controllers/cliente_controller.dart';
 import 'package:os_manutencao_ui/controllers/equipamento_controller.dart';
@@ -31,6 +32,9 @@ class OrdemServicoUiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<IdentificacaoController>(
+          create: (_) => IdentificacaoController(),
+        ),
         ChangeNotifierProvider<ClienteController>(
           create: (_) => ClienteController(),
         ),
@@ -54,7 +58,11 @@ class OrdemServicoUiApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'OS Manutenção',
         theme: AppTheme.light,
-        home: const LoginScreen(),
+        home: Consumer<IdentificacaoController>(
+          builder: (context, identificacao, child) => identificacao.identificado
+              ? const AppShell()
+              : const LoginScreen(),
+        ),
       ),
     );
   }

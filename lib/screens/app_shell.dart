@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:os_manutencao_ui/controllers/identificacao_controller.dart';
 import 'package:os_manutencao_ui/screens/clients/clients_page.dart';
 import 'package:os_manutencao_ui/screens/dashboard/dashboard_page.dart';
 import 'package:os_manutencao_ui/screens/equipment/equipment_page.dart';
 import 'package:os_manutencao_ui/screens/orders/orders_page.dart';
 import 'package:os_manutencao_ui/screens/technicians/technicians_page.dart';
 
-/// Estrutura principal de navegação da interface.
-///
-/// UI APENAS: o estado `_selectedIndex` controla somente qual tela visual está
-/// aparente. Não representa perfil, permissão, banco de dados ou regra de negócio.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -29,10 +27,12 @@ class _AppShellState extends State<AppShell> {
 
   static const _destinations = <_Destination>[
     _Destination('Dashboard', Icons.dashboard_outlined, Icons.dashboard),
-    _Destination('Ordens de serviço', Icons.assignment_outlined, Icons.assignment),
+    _Destination(
+        'Ordens de serviço', Icons.assignment_outlined, Icons.assignment),
     _Destination('Clientes', Icons.people_outline, Icons.people),
     _Destination('Técnicos', Icons.engineering_outlined, Icons.engineering),
-    _Destination('Equipamentos', Icons.precision_manufacturing_outlined, Icons.precision_manufacturing),
+    _Destination('Equipamentos', Icons.precision_manufacturing_outlined,
+        Icons.precision_manufacturing),
   ];
 
   @override
@@ -44,7 +44,18 @@ class _AppShellState extends State<AppShell> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('OS Manutenção'),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('OS Manutenção'),
+                Text(
+                  'Identificação: ${context.watch<IdentificacaoController>().nome}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
             actions: [
               IconButton(
                 tooltip: 'Ajuda sobre a interface',
@@ -52,11 +63,9 @@ class _AppShellState extends State<AppShell> {
                 icon: const Icon(Icons.help_outline),
               ),
               IconButton(
-                tooltip: 'Sair do protótipo',
+                tooltip: 'Sair',
                 onPressed: () {
-                  // TODO(FUNCIONALIDADE): quando houver autenticação real,
-                  // encerrar a sessão antes de retornar para a tela de acesso.
-                  Navigator.of(context).pop();
+                  context.read<IdentificacaoController>().sair();
                 },
                 icon: const Icon(Icons.logout),
               ),
@@ -70,9 +79,10 @@ class _AppShellState extends State<AppShell> {
                 NavigationRail(
                   extended: extendedRail,
                   selectedIndex: _selectedIndex,
-                  labelType: extendedRail ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+                  labelType: extendedRail
+                      ? NavigationRailLabelType.none
+                      : NavigationRailLabelType.all,
                   onDestinationSelected: (index) {
-                    // UI APENAS: muda somente a página visual selecionada.
                     setState(() => _selectedIndex = index);
                   },
                   leading: Padding(
@@ -109,7 +119,6 @@ class _AppShellState extends State<AppShell> {
     return NavigationDrawer(
       selectedIndex: _selectedIndex,
       onDestinationSelected: (index) {
-        // UI APENAS: seleção visual do destino no modo compacto.
         setState(() => _selectedIndex = index);
         Navigator.of(context).pop();
       },
@@ -136,9 +145,12 @@ class _AppShellState extends State<AppShell> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sobre este protótipo'),
+        title: const Text('Sobre o aplicativo'),
         content: const Text(
-          'Esta versão contém somente a interface gráfica. Cadastros, filtros, persistência, cálculos, imagens e regras de negócio ainda precisam ser implementados.',
+          'Gerencie clientes, técnicos, equipamentos e ordens de serviço com dados salvos neste computador. '
+          'O Dashboard resume os atendimentos registrados. '
+          'A identificação local usa o nome informado durante esta sessão. '
+          'Use Sair para encerrar a sessão e informar outro nome.',
         ),
         actions: [
           TextButton(
